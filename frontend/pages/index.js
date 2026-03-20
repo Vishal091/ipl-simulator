@@ -8,34 +8,63 @@ export default function Home() {
     try {
       setLoading(true);
 
-      const res = await fetch("https://ipl-simulator-tb8n.onrender.com/simulate", {
-        method: "POST"
-      });
+      const res = await fetch(
+        "https://ipl-simulator-tb8n.onrender.com/simulate",
+        {
+          method: "POST"
+        }
+      );
 
       const data = await res.json();
       setResult(data);
     } catch (err) {
-      console.error("Error:", err);
-      alert("Backend not reachable or error occurred");
+      console.error(err);
+      alert("Error connecting to backend");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>IPL Simulator 🏏</h1>
+    <div style={{ padding: 30, fontFamily: "Arial" }}>
+      <h1>🏏 IPL Simulator</h1>
 
-      <button onClick={simulateMatch} disabled={loading}>
+      <button
+        onClick={simulateMatch}
+        disabled={loading}
+        style={{
+          padding: "10px 20px",
+          fontSize: "16px",
+          cursor: "pointer"
+        }}
+      >
         {loading ? "Simulating..." : "Simulate Match"}
       </button>
 
       {result && (
-        <div style={{ marginTop: 20 }}>
-          <p>{result.team1}: {result.score1}</p>
-          <p>{result.team2}: {result.score2}</p>
-          <p><b>Winner: {result.winner}</b></p>
-          <p>Venue: {result.venue}</p>
+        <div style={{ marginTop: 30 }}>
+          <h2>Result</h2>
+
+          <p>
+            {result.team1}: <b>{result.score1}</b>
+          </p>
+          <p>
+            {result.team2}: <b>{result.score2}</b>
+          </p>
+
+          <h3>🏆 Winner: {result.winner}</h3>
+
+          <p>
+            <b>Venue:</b> {result.venue}
+          </p>
+
+          <h3>{result.summary}</h3>
+
+          <h3>🔥 Key Moments</h3>
+          {result.commentary &&
+            result.commentary.map((line, index) => (
+              <p key={index}>• {line}</p>
+            ))}
         </div>
       )}
     </div>
