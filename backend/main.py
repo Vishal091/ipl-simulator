@@ -1,6 +1,7 @@
 from fastapi import FastAPI
-import random
 from fastapi.middleware.cors import CORSMiddleware
+import random
+
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -9,6 +10,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 @app.get("/")
 def home():
     return {"message": "IPL Simulator API Running"}
