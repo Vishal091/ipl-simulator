@@ -1,5 +1,5 @@
 const simulateMatch = async () => {
-  const res = await fetch("https://YOUR-RENDER-URL/simulate", {
+  const res = await fetch("https://ipl-simulator-tb8n.onrender.com/simulate", {
     method: "POST"
   });
 
