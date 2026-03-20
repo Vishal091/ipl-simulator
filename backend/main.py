@@ -4,7 +4,7 @@ import random
 
 app = FastAPI()
 
-# ✅ CORS (must be here)
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,7 +13,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Sample teams
 teams = {
     "RCB": [
         {"name": "Virat Kohli", "bat": 95},
