@@ -13,7 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-teams = {
+teams ={
     "RCB": [
         {"name": "Virat Kohli", "bat": 95},
         {"name": "Faf du Plessis", "bat": 88}
