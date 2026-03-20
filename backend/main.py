@@ -120,7 +120,8 @@ def simulate_match():
     venue_factor = venues[venue_name]["batting"]
 
     score1, wk1 = play_innings(teams[team1_name], venue_factor)
-    score2, wk2 = play_innings(teams[team2_name], venue_factor)
+    target = score1 + 1
+    score2, wk2 = play_innings(teams[team2_name], venue_factor, target)
 
     winner = team1_name if score1 > score2 else team2_name
 
