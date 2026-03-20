@@ -1,3 +1,8 @@
-export default function Home() {
-  return <h1>IPL Simulator 🚀</h1>;
-}
+const simulateMatch = async () => {
+  const res = await fetch("https://YOUR-RENDER-URL/simulate", {
+    method: "POST"
+  });
+
+  const data = await res.json();
+  setResult(data);
+};
