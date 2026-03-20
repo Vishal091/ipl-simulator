@@ -74,7 +74,9 @@ def simulate_match():
         if outcome == "wicket":
             wickets += 1
             striker_index += 1
-            continue
+            if striker_index >= len(team):
+                break
+            
 
         elif outcome == "dot":
             continue
