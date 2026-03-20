@@ -4,14 +4,16 @@ import random
 
 app = FastAPI()
 
+# ✅ CORS (required for frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://ipl-simulator-nine.vercel.app/"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# ✅ Teams with player attributes
 teams = {
     "RCB": [
         {"name": "Kohli", "bat": 95, "agg": 70},
@@ -28,6 +30,8 @@ teams = {
         {"name": "Tailender", "bat": 30, "agg": 40}
     ]
 }
+
+# ✅ Venue impact
 venues = {
     "Wankhede": {"batting": 1.2},
     "Chepauk": {"batting": 0.9}
@@ -37,34 +41,38 @@ venues = {
 def home():
     return {"message": "IPL Simulator API Running"}
 
-@app.post("/simulate")
-def simulate_match():
-    import random
+# ✅ Core innings simulation
+def play_innings(team, venue_factor):
     total_runs = 0
     wickets = 0
     balls = 0
     striker_index = 0
 
-    while balls < 120 and wickets < len(team):
+    while balls < 120:
+
+        # Stop if all players out
+        if striker_index >= len(team):
+            break
+
         player = team[striker_index]
 
         balls += 1
         over = balls // 6
 
-        # Base weights
+        # Phase-based weights
         if over < 6:
-            weights = [25, 30, 10, 20, 10, 5]
+            weights = [25, 30, 10, 20, 10, 5]   # Powerplay
         elif over < 16:
-            weights = [35, 35, 10, 10, 3, 7]
+            weights = [35, 35, 10, 10, 3, 7]   # Middle overs
         else:
-            weights = [20, 25, 10, 20, 15, 10]
+            weights = [20, 25, 10, 20, 15, 10] # Death overs
 
-        # 🔥 MODIFY BASED ON PLAYER
-        aggression_boost = player["agg"] / 100
+        # Player aggression impact
+        aggression = player["agg"] / 100
 
-        weights[3] *= aggression_boost   # 4s
-        weights[4] *= aggression_boost   # 6s
-        weights[5] *= (1.2 - aggression_boost)  # wickets
+        weights[3] *= aggression  # 4s
+        weights[4] *= aggression  # 6s
+        weights[5] *= (1.2 - aggression)  # wickets
 
         outcome = random.choices(
             ["dot", "1", "2", "4", "6", "wicket"],
@@ -74,9 +82,7 @@ def simulate_match():
         if outcome == "wicket":
             wickets += 1
             striker_index += 1
-            if striker_index >= len(team):
-                break
-            
+            continue
 
         elif outcome == "dot":
             continue
@@ -85,23 +91,27 @@ def simulate_match():
             runs = int(outcome)
             total_runs += int(runs * venue_factor)
 
-            # strike rotation
-            if runs % 2 == 1:
-                pass  # change striker later (optional logic)
-
     return total_runs, wickets
 
-    venue = "Wankhede"
-    factor = venues[venue]["batting"]
-    score1, wk1 = play_innings(teams["RCB"], factor)
-    score2, wk2 = play_innings(teams["MI"], factor)
+# ✅ Match simulation
+@app.post("/simulate")
+def simulate_match():
+    team1_name = "RCB"
+    team2_name = "MI"
+    venue_name = "Wankhede"
 
-    winner = "RCB" if score1 > score2 else "MI"
+    venue_factor = venues[venue_name]["batting"]
+
+    score1, wk1 = play_innings(teams[team1_name], venue_factor)
+    score2, wk2 = play_innings(teams[team2_name], venue_factor)
+
+    winner = team1_name if score1 > score2 else team2_name
 
     return {
-        "team1": "RCB",
+        "team1": team1_name,
         "score1": f"{score1}/{wk1}",
-        "team2": "MI",
+        "team2": team2_name,
         "score2": f"{score2}/{wk2}",
-        "winner": winner
+        "winner": winner,
+        "venue": venue_name
     }
