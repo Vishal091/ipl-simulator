@@ -42,7 +42,7 @@ def home():
     return {"message": "IPL Simulator API Running"}
 
 # ✅ Core innings simulation
-def play_innings(team, venue_factor):
+def play_innings(team, venue_factor, target=None):
     total_runs = 0
     wickets = 0
     balls = 0
@@ -50,7 +50,6 @@ def play_innings(team, venue_factor):
 
     while balls < 120:
 
-        # Stop if all players out
         if striker_index >= len(team):
             break
 
@@ -59,20 +58,34 @@ def play_innings(team, venue_factor):
         balls += 1
         over = balls // 6
 
-        # Phase-based weights
+        # Phase weights
         if over < 6:
-            weights = [25, 30, 10, 20, 10, 5]   # Powerplay
+            weights = [25, 30, 10, 20, 10, 5]
         elif over < 16:
-            weights = [35, 35, 10, 10, 3, 7]   # Middle overs
+            weights = [35, 35, 10, 10, 3, 7]
         else:
-            weights = [20, 25, 10, 20, 15, 10] # Death overs
+            weights = [20, 25, 10, 20, 15, 10]
 
-        # Player aggression impact
+        # 🔥 CHASING PRESSURE
+        if target:
+            runs_needed = target - total_runs
+            balls_left = 120 - balls
+
+            if balls_left > 0:
+                required_rr = (runs_needed * 6) / balls_left
+
+                if required_rr > 10:
+                    weights[4] *= 1.5  # more 6s
+                    weights[5] *= 1.5  # more wickets
+                elif required_rr < 6:
+                    weights[0] *= 1.2  # more dots (safe play)
+
+        # Player aggression
         aggression = player["agg"] / 100
 
-        weights[3] *= aggression  # 4s
-        weights[4] *= aggression  # 6s
-        weights[5] *= (1.2 - aggression)  # wickets
+        weights[3] *= aggression
+        weights[4] *= aggression
+        weights[5] *= (1.2 - aggression)
 
         outcome = random.choices(
             ["dot", "1", "2", "4", "6", "wicket"],
@@ -90,6 +103,10 @@ def play_innings(team, venue_factor):
         else:
             runs = int(outcome)
             total_runs += int(runs * venue_factor)
+
+        # ✅ WIN CONDITION (CHASE COMPLETE)
+        if target and total_runs >= target:
+            break
 
     return total_runs, wickets
 
