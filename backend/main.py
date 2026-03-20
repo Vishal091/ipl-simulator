@@ -40,10 +40,6 @@ def home():
 @app.post("/simulate")
 def simulate_match():
     import random
-
-    def play_innings(team, venue_factor):
-    import random
-
     total_runs = 0
     wickets = 0
     balls = 0
