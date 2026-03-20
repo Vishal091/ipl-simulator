@@ -22,6 +22,10 @@ teams = {
         {"name": "Suryakumar Yadav", "bat": 92}
     ]
 }
+venues = {
+    "Wankhede": {"batting": 1.2},
+    "Chepauk": {"batting": 0.9}
+}
 
 @app.get("/")
 def home():
@@ -31,30 +35,43 @@ def home():
 def simulate_match():
     import random
 
-    def play_innings():
-        total_runs = 0
-        wickets = 0
-        balls = 0
+    def play_innings(venue_factor):
+    import random
 
-        while balls < 120 and wickets < 10:
-            balls += 1
+    total_runs = 0
+    wickets = 0
+    balls = 0
 
-            outcome = random.choices(
-                ["dot", "1", "2", "4", "6", "wicket"],
-                weights=[30, 30, 10, 15, 5, 10]
-            )[0]
+    while balls < 120 and wickets < 10:
+        balls += 1
+        over = balls // 6
 
-            if outcome == "wicket":
-                wickets += 1
-            elif outcome == "dot":
-                continue
-            else:
-                total_runs += int(outcome)
+        if over < 6:
+            weights = [25, 30, 10, 20, 10, 5]
+        elif over < 16:
+            weights = [35, 35, 10, 10, 3, 7]
+        else:
+            weights = [20, 25, 10, 20, 15, 10]
 
-        return total_runs, wickets
+        outcome = random.choices(
+            ["dot", "1", "2", "4", "6", "wicket"],
+            weights=weights
+        )[0]
 
-    score1, wk1 = play_innings()
-    score2, wk2 = play_innings()
+        if outcome == "wicket":
+            wickets += 1
+        elif outcome == "dot":
+            continue
+        else:
+            runs = int(outcome)
+            total_runs += int(runs * venue_factor)
+
+    return total_runs, wickets
+
+    venue = "Wankhede"
+    factor = venues[venue]["batting"]
+    score1, wk1 = play_innings(factor)
+    score2, wk2 = play_innings(factor)
 
     winner = "RCB" if score1 > score2 else "MI"
 
