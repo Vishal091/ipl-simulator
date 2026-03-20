@@ -14,12 +14,18 @@ app.add_middleware(
 
 teams = {
     "RCB": [
-        {"name": "Virat Kohli", "bat": 95},
-        {"name": "Faf du Plessis", "bat": 88}
+        {"name": "Kohli", "bat": 95, "agg": 70},
+        {"name": "Faf", "bat": 88, "agg": 75},
+        {"name": "Maxwell", "bat": 85, "agg": 95},
+        {"name": "DK", "bat": 80, "agg": 90},
+        {"name": "Tailender", "bat": 30, "agg": 40}
     ],
     "MI": [
-        {"name": "Rohit Sharma", "bat": 90},
-        {"name": "Suryakumar Yadav", "bat": 92}
+        {"name": "Rohit", "bat": 90, "agg": 70},
+        {"name": "Sky", "bat": 92, "agg": 90},
+        {"name": "Hardik", "bat": 88, "agg": 85},
+        {"name": "Tim David", "bat": 85, "agg": 95},
+        {"name": "Tailender", "bat": 30, "agg": 40}
     ]
 }
 venues = {
@@ -35,23 +41,34 @@ def home():
 def simulate_match():
     import random
 
-    def play_innings(venue_factor):
+    def play_innings(team, venue_factor):
     import random
 
     total_runs = 0
     wickets = 0
     balls = 0
+    striker_index = 0
 
-    while balls < 120 and wickets < 10:
+    while balls < 120 and wickets < len(team):
+        player = team[striker_index]
+
         balls += 1
         over = balls // 6
 
+        # Base weights
         if over < 6:
             weights = [25, 30, 10, 20, 10, 5]
         elif over < 16:
             weights = [35, 35, 10, 10, 3, 7]
         else:
             weights = [20, 25, 10, 20, 15, 10]
+
+        # 🔥 MODIFY BASED ON PLAYER
+        aggression_boost = player["agg"] / 100
+
+        weights[3] *= aggression_boost   # 4s
+        weights[4] *= aggression_boost   # 6s
+        weights[5] *= (1.2 - aggression_boost)  # wickets
 
         outcome = random.choices(
             ["dot", "1", "2", "4", "6", "wicket"],
@@ -60,18 +77,26 @@ def simulate_match():
 
         if outcome == "wicket":
             wickets += 1
+            striker_index += 1
+            continue
+
         elif outcome == "dot":
             continue
+
         else:
             runs = int(outcome)
             total_runs += int(runs * venue_factor)
+
+            # strike rotation
+            if runs % 2 == 1:
+                pass  # change striker later (optional logic)
 
     return total_runs, wickets
 
     venue = "Wankhede"
     factor = venues[venue]["batting"]
-    score1, wk1 = play_innings(factor)
-    score2, wk2 = play_innings(factor)
+    score1, wk1 = play_innings(teams["RCB"], factor)
+    score2, wk2 = play_innings(teams["MI"], factor)
 
     winner = "RCB" if score1 > score2 else "MI"
 
