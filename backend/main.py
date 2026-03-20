@@ -47,6 +47,7 @@ def play_innings(team, venue_factor, target=None):
     wickets = 0
     balls = 0
     striker_index = 0
+    commentary = []
 
     while balls < 120:
 
@@ -54,11 +55,9 @@ def play_innings(team, venue_factor, target=None):
             break
 
         player = team[striker_index]
-
         balls += 1
         over = balls // 6
 
-        # Phase weights
         if over < 6:
             weights = [25, 30, 10, 20, 10, 5]
         elif over < 16:
@@ -66,21 +65,19 @@ def play_innings(team, venue_factor, target=None):
         else:
             weights = [20, 25, 10, 20, 15, 10]
 
-        # 🔥 CHASING PRESSURE
         if target:
             runs_needed = target - total_runs
             balls_left = 120 - balls
 
             if balls_left > 0:
-                required_rr = (runs_needed * 6) / balls_left
+                rr = (runs_needed * 6) / balls_left
 
-                if required_rr > 10:
-                    weights[4] *= 1.5  # more 6s
-                    weights[5] *= 1.5  # more wickets
-                elif required_rr < 6:
-                    weights[0] *= 1.2  # more dots (safe play)
+                if rr > 10:
+                    weights[4] *= 1.5
+                    weights[5] *= 1.5
+                elif rr < 6:
+                    weights[0] *= 1.2
 
-        # Player aggression
         aggression = player["agg"] / 100
 
         weights[3] *= aggression
@@ -92,23 +89,25 @@ def play_innings(team, venue_factor, target=None):
             weights=weights
         )[0]
 
-        if outcome == "wicket":
+        # 🔥 COMMENTARY EVENTS
+        if outcome == "6":
+            commentary.append(f"{player['name']} smashes a SIX!")
+        elif outcome == "4":
+            commentary.append(f"{player['name']} finds the boundary!")
+        elif outcome == "wicket":
+            commentary.append(f"WICKET! {player['name']} is gone!")
             wickets += 1
             striker_index += 1
             continue
 
-        elif outcome == "dot":
-            continue
+        elif outcome != "dot":
+            total_runs += int(outcome * venue_factor)
 
-        else:
-            runs = int(outcome)
-            total_runs += int(runs * venue_factor)
-
-        # ✅ WIN CONDITION (CHASE COMPLETE)
         if target and total_runs >= target:
+            commentary.append("CHASE COMPLETED!")
             break
 
-    return total_runs, wickets
+    return total_runs, wickets, commentary
 
 # ✅ Match simulation
 @app.post("/simulate")
@@ -119,17 +118,22 @@ def simulate_match():
 
     venue_factor = venues[venue_name]["batting"]
 
-    score1, wk1 = play_innings(teams[team1_name], venue_factor)
+    score1, wk1, comm1 = play_innings(teams[team1_name], venue_factor)
     target = score1 + 1
-    score2, wk2 = play_innings(teams[team2_name], venue_factor, target)
+    score2, wk2, comm2 = play_innings(teams[team2_name], venue_factor, target))
 
-    winner = team1_name if score1 > score2 else team2_name
+    if score2 >= target:
+        result_line = f"{team2_name} chased it down!"
+    else:
+        result_line = f"{team1_name} defends the total!"
 
     return {
-        "team1": team1_name,
-        "score1": f"{score1}/{wk1}",
-        "team2": team2_name,
-        "score2": f"{score2}/{wk2}",
-        "winner": winner,
-        "venue": venue_name
-    }
+    "team1": team1_name,
+    "score1": f"{score1}/{wk1}",
+    "team2": team2_name,
+    "score2": f"{score2}/{wk2}",
+    "winner": team1_name if score1 > score2 else team2_name,
+    "venue": venue_name,
+    "commentary": comm1[-3:] + comm2[-5:],  # last moments
+    "summary": result_line
+}
