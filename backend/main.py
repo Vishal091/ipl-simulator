@@ -13,7 +13,12 @@ app.add_middleware(
 )
 
 # ================= DATA =================
-df = pd.read_csv("backend/data/ipl_2026.csv")
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+csv_path = os.path.join(BASE_DIR, "data", "ipl_2026.csv")
+
+df = pd.read_csv(csv_path)
 
 teams = {}
 for _, row in df.iterrows():
