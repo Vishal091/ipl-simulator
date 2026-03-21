@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Tournament() {
   const API = "https://ipl-simulator-tb8n.onrender.com";
@@ -8,36 +8,45 @@ export default function Tournament() {
   const [team, setTeam] = useState("");
   const [squad, setSquad] = useState([]);
   const [xi, setXi] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // ================= LOAD TEAMS =================
+  useEffect(() => {
+    loadTeams();
+  }, []);
 
   const loadTeams = async () => {
-    const res = await fetch(API + "/teams");
-    setTeams(await res.json());
+    try {
+      const res = await fetch(API + "/teams");
+      const data = await res.json();
+      setTeams(data);
+    } catch (err) {
+      console.error("Error loading teams", err);
+    }
   };
 
+  // ================= LOAD SQUAD =================
   const loadSquad = async () => {
-    const res = await fetch(`${API}/team/${team}`);
-    setSquad(await res.json());
+    if (!team) {
+      alert("Select a team first");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/team/${team}`);
+      const data = await res.json();
+
+      setSquad(data);
+      setXi([]);
+    } catch (err) {
+      console.error("Error loading squad", err);
+    }
   };
-const playMatch = async () => {
-  if (xi.length !== 11) {
-    alert("Select 11 players");
-    return;
-  }
 
-  const res = await fetch(API + "/tournament-match", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ xi })
-  });
-
-  const data = await res.json();
-
-  // 🔥 NEW FLOW
-  localStorage.setItem("matchData", JSON.stringify(data));
-  window.location.href = "/match";
-};
+  // ================= SELECT XI =================
   const toggle = (p) => {
     const exists = xi.find(x => x.name === p.name);
+
     if (exists) {
       setXi(xi.filter(x => x.name !== p.name));
     } else if (xi.length < 11) {
@@ -45,65 +54,105 @@ const playMatch = async () => {
     }
   };
 
+  // ================= PLAY MATCH =================
+  const playMatch = async () => {
+    if (xi.length !== 11) {
+      alert(`Select 11 players (current: ${xi.length})`);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      console.log("Sending XI:", xi); // 🔥 DEBUG
+
+      const res = await fetch(API + "/tournament-match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ xi })
+      });
+
+      const data = await res.json();
+
+      console.log("Match Response:", data); // 🔥 DEBUG
+
+      if (data.error) {
+        alert("Backend error: " + data.error);
+        setLoading(false);
+        return;
+      }
+
+      // 🔥 SAVE + REDIRECT
+      localStorage.setItem("matchData", JSON.stringify(data));
+      window.location.href = "/match";
+
+    } catch (err) {
+      console.error("Match error:", err);
+      alert("Something went wrong while starting match");
+    }
+
+    setLoading(false);
+  };
+
   return (
-    <div style={page}>
+    <div style={{
+      background: "#0B0F1A",
+      color: "white",
+      minHeight: "100vh",
+      padding: "20px"
+    }}>
       <h1>🏆 Tournament Mode</h1>
 
-      <button onClick={loadTeams}>Load Teams</button>
-
+      {/* TEAM SELECT */}
       <select onChange={(e) => setTeam(e.target.value)}>
-        <option>Select Team</option>
-        {teams.map(t => <option key={t}>{t}</option>)}
+        <option value="">Select Team</option>
+        {teams.map(t => (
+          <option key={t}>{t}</option>
+        ))}
       </select>
 
-      <button onClick={loadSquad}>Load Squad</button>
+      <button className="glow-btn" onClick={loadSquad} style={{ marginLeft: "10px" }}>
+        Load Squad
+      </button>
 
-      <div style={grid}>
+      {/* SQUAD */}
+      <h3 style={{ marginTop: "20px" }}>Squad</h3>
+
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+        gap: "10px"
+      }}>
         {squad.map((p, i) => (
           <div
-  key={i}
-  onClick={() => toggle(p)}
-  className="card"
-  style={{
-    border: xi.find(x => x.name === p.name)
-      ? "2px solid #00E5FF"
-      : "1px solid rgba(255,255,255,0.1)"
-  }}
->
-  <h4>{p.name}</h4>
-  <p>{p.role}</p>
-</div>
+            key={i}
+            onClick={() => toggle(p)}
+            className="card"
+            style={{
+              border: xi.find(x => x.name === p.name)
+                ? "2px solid #00E5FF"
+                : "1px solid rgba(255,255,255,0.1)"
+            }}
+          >
+            <h4>{p.name}</h4>
+            <p>{p.role}</p>
+          </div>
         ))}
       </div>
 
-      <h3>Playing XI: {xi.length}/11</h3>
-          <button
-  className="glow-btn"
-  onClick={playMatch}
-  style={{ marginTop: "20px" }}
->
-  ▶ Play Match
-</button>
+      {/* XI */}
+      <h3 style={{ marginTop: "20px" }}>
+        Playing XI: {xi.length}/11
+      </h3>
+
+      {/* PLAY BUTTON */}
+      <button
+        className="glow-btn"
+        onClick={playMatch}
+        style={{ marginTop: "20px", opacity: loading ? 0.6 : 1 }}
+      >
+        {loading ? "Starting Match..." : "▶ Play Match"}
+      </button>
     </div>
   );
 }
-
-const page = {
-  background: "#0B0F1A",
-  color: "white",
-  minHeight: "100vh",
-  padding: "20px"
-};
-
-const grid = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-  gap: "10px"
-};
-
-const card = {
-  padding: "10px",
-  borderRadius: "10px",
-  background: "#111827",
-  cursor: "pointer"
-};
