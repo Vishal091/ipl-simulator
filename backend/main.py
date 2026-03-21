@@ -138,17 +138,16 @@ def real_match(data: dict):
         "log": log[-10:]
     }
 @app.post("/tournament-match")
+@app.post("/tournament-match")
 def tournament_match(data: dict):
-    xi_names = data["xi"]
 
-    # convert names → player objects
-    all_players = sum(teams.values(), [])
+    if "xi" not in data or not data["xi"]:
+        return {"error": "No XI selected"}
 
-    xi = []
-    for name in xi_names:
-        player = next((p for p in all_players if p["name"] == name), None)
-        if player:
-            xi.append(player)
+    xi = data["xi"]  # ✅ already full objects
+
+    if len(xi) < 1:
+        return {"error": "Invalid XI"}
 
     score, wk, log = play_match(xi)
 
