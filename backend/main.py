@@ -44,14 +44,27 @@ def pick_bowlers(xi):
 
     for p in xi:
         if p.get("role") in ["BOWL", "AR"]:
-            bowler = p.copy()
-            bowler["overs"] = 0
+            bowler = {
+                "name": p["name"],
+                "role": p["role"],
+                "bat": p["bat"],
+                "bowl": p["bowl"],
+                "agg": p["agg"],
+                "overs": 0  # ✅ FORCE
+            }
             bowlers.append(bowler)
 
+    # fallback (VERY IMPORTANT)
     if len(bowlers) == 0:
         for p in xi[:5]:
-            bowler = p.copy()
-            bowler["overs"] = 0
+            bowler = {
+                "name": p["name"],
+                "role": p["role"],
+                "bat": p["bat"],
+                "bowl": p["bowl"],
+                "agg": p["agg"],
+                "overs": 0
+            }
             bowlers.append(bowler)
 
     return bowlers
