@@ -24,15 +24,35 @@ body {
 
 /* Glass card */
 .card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 16px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.1);
-  transition: 0.3s;
+  transform: perspective(800px) translateY(0px);
 }
 
 .card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 0 20px rgba(0,229,255,0.2);
+  transform: perspective(800px) translateY(-10px) rotateX(5deg);
 }
+/* animated background glow */
+body::before {
+  content: "";
+  position: fixed;
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+  background: radial-gradient(circle, rgba(0,229,255,0.1), transparent 60%);
+  animation: moveBg 12s linear infinite;
+  z-index: -1;
+}
+
+@keyframes moveBg {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+<div style={{
+  height: "100vh",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  textAlign: "center",
+  transform: "perspective(1000px)"
+}}>
