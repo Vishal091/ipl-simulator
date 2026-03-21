@@ -7,8 +7,6 @@ export default function Home() {
   return (
     <div style={{
       height: "100vh",
-      background: "linear-gradient(135deg, #0B0F1A, #111827)",
-      color: "white",
       display: "flex",
       flexDirection: "column",
       justifyContent: "center",
@@ -17,8 +15,7 @@ export default function Home() {
     }}>
       
       <h1 style={{
-        fontSize: "3rem",
-        fontWeight: "bold",
+        fontSize: "4rem",
         background: "linear-gradient(90deg, #00E5FF, #FF3B3B)",
         WebkitBackgroundClip: "text",
         color: "transparent"
@@ -26,8 +23,8 @@ export default function Home() {
         IPL SIMULATOR
       </h1>
 
-      <p style={{ opacity: 0.7 }}>
-        Build your squad. Control the game. Dominate the league.
+      <p style={{ opacity: 0.6 }}>
+        The most advanced cricket simulation engine
       </p>
 
       <div style={{
@@ -35,29 +32,18 @@ export default function Home() {
         gap: "20px",
         marginTop: "40px"
       }}>
-        <button onClick={() => router.push("/tournament")} style={btn}>
+        <button className="glow-btn" onClick={() => router.push("/tournament")}>
           🏆 Tournament
         </button>
 
-        <button onClick={() => router.push("/quick-match")} style={btn}>
+        <button className="glow-btn" onClick={() => router.push("/quick-match")}>
           ⚡ Quick Match
         </button>
 
-        <button onClick={() => router.push("/career")} style={btn}>
-          🎯 Career Mode
+        <button className="glow-btn" onClick={() => router.push("/career")}>
+          🎯 Career
         </button>
       </div>
     </div>
   );
 }
-
-const btn = {
-  padding: "15px 25px",
-  borderRadius: "12px",
-  border: "none",
-  background: "linear-gradient(135deg, #00E5FF, #0099cc)",
-  color: "black",
-  fontWeight: "bold",
-  cursor: "pointer",
-  transition: "0.3s"
-};
