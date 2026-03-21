@@ -2,12 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import random
-
+app = FastAPI()
 
 @app.get("/")
 def home():
     return {"message": "IPL Simulator API is running 🚀"}
-app = FastAPI()
+
 
 app.add_middleware(
     CORSMiddleware,
