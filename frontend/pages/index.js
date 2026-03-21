@@ -1,12 +1,12 @@
 import { useState } from "react";
 
 export default function Home() {
+  const API = "https://ipl-simulator-tb8n.onrender.com";
+
   const [match, setMatch] = useState(null);
   const [tournament, setTournament] = useState(null);
   const [career, setCareer] = useState(null);
   const [name, setName] = useState("");
-
-  const API = "https://ipl-simulator-tb8n.onrender.com";
 
   const simulateMatch = async () => {
     const res = await fetch(API + "/simulate", { method: "POST" });
@@ -23,10 +23,8 @@ export default function Home() {
   };
 
   const createPlayer = async () => {
-    await fetch(`${API}/create-player?name=${name}&team=RCB`, {
-      method: "POST"
-    });
-    alert("Player created!");
+    await fetch(`${API}/create-player?name=${name}`, { method: "POST" });
+    alert("Player Created");
   };
 
   const playCareer = async () => {
@@ -51,7 +49,6 @@ export default function Home() {
           <p>{match.score1}</p>
           <p>{match.score2}</p>
           <h3>Winner: {match.winner}</h3>
-          {match.commentary.map((c, i) => <p key={i}>{c}</p>)}
         </div>
       )}
 
@@ -62,7 +59,6 @@ export default function Home() {
           {tournament.points_table.map(([t, s], i) => (
             <p key={i}>{t} - {s.pts}</p>
           ))}
-
           <h2>Champion: {tournament.playoffs.champion}</h2>
         </div>
       )}
@@ -70,17 +66,19 @@ export default function Home() {
       {/* CAREER */}
       <div>
         <h2>Career Mode</h2>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" />
+        <input value={name} onChange={(e) => setName(e.target.value)} />
         <button onClick={createPlayer}>Create Player</button>
       </div>
 
       {career && (
         <div>
-          <p>{career.team}: {career.score}</p>
-          <p>{career.opponent}: {career.opponent_score}</p>
+          <p>{career.team_score} vs {career.opp_score}</p>
           <h3>You scored: {career.player_runs}</h3>
           <h2>{career.result}</h2>
-          <p>{career.question}</p>
+
+          <p>Matches: {career.stats.matches}</p>
+          <p>Runs: {career.stats.runs}</p>
+          <p>Form: {career.stats.form}</p>
         </div>
       )}
     </div>
