@@ -44,18 +44,18 @@ export default function Tournament() {
       <div style={grid}>
         {squad.map((p, i) => (
           <div
-            key={i}
-            onClick={() => toggle(p)}
-            style={{
-              ...card,
-              border: xi.find(x => x.name === p.name)
-                ? "2px solid #00E5FF"
-                : "1px solid #333"
-            }}
-          >
-            <h4>{p.name}</h4>
-            <p>{p.role}</p>
-          </div>
+  key={i}
+  onClick={() => toggle(p)}
+  className="card"
+  style={{
+    border: xi.find(x => x.name === p.name)
+      ? "2px solid #00E5FF"
+      : "1px solid rgba(255,255,255,0.1)"
+  }}
+>
+  <h4>{p.name}</h4>
+  <p>{p.role}</p>
+</div>
         ))}
       </div>
 
