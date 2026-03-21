@@ -10,6 +10,9 @@ export default function Home() {
   const [squad, setSquad] = useState([]);
   const [xi, setXi] = useState([]);
   const [result, setResult] = useState(null);
+  const [liveLog, setLiveLog] = useState([]);
+  const [ballIndex, setBallIndex] = useState(0);
+  const [liveScore, setLiveScore] = useState("0/0");
 
   // Career
   const [playerName, setPlayerName] = useState("");
@@ -40,20 +43,55 @@ export default function Home() {
   };
 
   // ================= TOURNAMENT =================
-  const playMatch = async () => {
-    if (xi.length !== 11) {
-      alert("Select 11 players");
-      return;
+const playMatch = async () => {
+  if (xi.length !== 11) {
+    alert("Select 11 players");
+    return;
+  }
+
+  const res = await fetch(API + "/tournament-match", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ xi })
+  });
+
+  const data = await res.json();
+
+  setResult(data);
+
+  // 🔥 LIVE MODE INIT
+  setLiveLog(data.log || []);
+  setBallIndex(0);
+};
+const nextBall = () => {
+  if (ballIndex >= liveLog.length) return;
+
+  setBallIndex(ballIndex + 1);
+};
+const autoPlay = () => {
+  let i = 0;
+
+  const interval = setInterval(() => {
+    i++;
+    setBallIndex(i);
+
+    if (i >= liveLog.length) {
+      clearInterval(interval);
     }
+  }, 800);
+};
+{liveLog.length > 0 && (
+  <div>
+    <h3>🎙 Live Commentary</h3>
 
-    const res = await fetch(API + "/tournament-match", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ xi })
-    });
+    <button onClick={nextBall}>Next Ball</button>
+    <button onClick={autoPlay}>Auto Play</button>
 
-    setResult(await res.json());
-  };
+    {liveLog.slice(0, ballIndex).map((l, i) => (
+      <p key={i}>{l}</p>
+    ))}
+  </div>
+)}
 
   // ================= QUICK MATCH =================
   const quickMatch = async () => {
