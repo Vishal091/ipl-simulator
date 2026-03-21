@@ -26,7 +26,17 @@ export default function Home() {
       setXi([...xi, p]);
     }
   };
+const [impact, setImpact] = useState(null);
 
+const playReal = async () => {
+  const res = await fetch(API + "/real-match", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ xi, impact })
+  });
+
+  setResult(await res.json());
+};
   const play = async () => {
     const res = await fetch(API + "/play", {
       method: "POST",
