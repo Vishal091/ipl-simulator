@@ -38,11 +38,11 @@ const playReal = async () => {
   setResult(await res.json());
 };
   const play = async () => {
-    const res = await fetch(API + "/play", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ xi })
-    });
+    const res = await fetch(API + "/tournament-match", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ xi })
+}  );
 
     setResult(await res.json());
   };
