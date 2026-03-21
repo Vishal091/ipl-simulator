@@ -18,7 +18,12 @@ app.add_middleware(
 
 # ================= DATA =================
 import os
-
+PITCHES = [
+    {"name": "Mumbai", "bat": 1.2, "spin": 0.8, "pace": 1.0},
+    {"name": "Chennai", "bat": 0.9, "spin": 1.3, "pace": 0.9},
+    {"name": "Bangalore", "bat": 1.4, "spin": 0.8, "pace": 1.0},
+    {"name": "Kolkata", "bat": 1.1, "spin": 1.2, "pace": 0.9},
+]
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 csv_path = os.path.join(BASE_DIR, "data", "ipl_2026.csv")
 
@@ -37,31 +42,62 @@ for _, row in df.iterrows():
 TEAM_NAMES = list(teams.keys())
 
 # ================= ENGINE =================
-def simulate_ball(p):
+def toss(team1, team2):
+    winner = random.choice([team1, team2])
+    decision = random.choice(["bat", "bowl"])
+    return winner, decision
+def simulate_ball(p, pitch):
+    base = p["bat"] * pitch["bat"]
+
     outcomes = ["dot","1","2","4","6","wicket"]
-    weights = [30,30,10,p["bat"]*0.2,p["bat"]*0.1,20]
+
+    weights = [
+        25,
+        30,
+        10,
+        base * 0.25,
+        base * 0.15,
+        20 - (p["bat"] * 0.1)
+    ]
+
     return random.choices(outcomes, weights=weights)[0]
 
-def play_match(xi):
+def play_match(xi, impact=None):
+    pitch = random.choice(PITCHES)
+
     score, wk, log = 0, 0, []
     striker = 0
 
     for ball in range(120):
-        if striker >= len(xi): break
-        p = xi[striker]
-        res = simulate_ball(p)
+
+        if striker >= len(xi):
+            break
+
+        player = xi[striker]
+
+        res = simulate_ball(player, pitch)
 
         if res == "wicket":
             wk += 1
-            log.append(f"{p['name']} OUT")
+            log.append(f"{player['name']} OUT")
+
+            # IMPACT PLAYER
+            if impact and wk == 3:
+                xi.append(impact)
+                log.append(f"Impact Player {impact['name']} IN")
+
             striker += 1
+
         elif res != "dot":
             runs = int(res)
             score += runs
-            if runs >= 4:
-                log.append(f"{p['name']} hits {runs}")
 
-    return score, wk, log
+            if runs == 4:
+                log.append(f"{player['name']} hits FOUR")
+            elif runs == 6:
+                log.append(f"{player['name']} hits SIX")
+
+    return score, wk, log, pitch["name"]
 
 # ================= QUICK MATCH =================
 @app.post("/quick-match")
@@ -89,7 +125,18 @@ def get_teams():
 @app.get("/team/{team}")
 def get_team(team: str):
     return teams.get(team, [])
+@app.post("/real-match")
+def real_match(data: dict):
+    xi = data["xi"]
+    impact = data.get("impact")
 
+    score, wk, log, pitch = play_match(xi, impact)
+
+    return {
+        "score": f"{score}/{wk}",
+        "pitch": pitch,
+        "log": log[-10:]
+    }
 @app.post("/tournament-match")
 def tournament_match(data: dict):
     xi = data["xi"]
