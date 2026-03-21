@@ -4,7 +4,7 @@ import random
 
 app = FastAPI()
 
-# ✅ CORS
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,25 +13,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Teams
+# Teams
 teams = {
     "RCB": [
-        {"name": "Kohli", "bat": 95, "agg": 70},
-        {"name": "Faf", "bat": 88, "agg": 75},
-        {"name": "Maxwell", "bat": 85, "agg": 95},
-        {"name": "DK", "bat": 80, "agg": 90},
-        {"name": "Tailender", "bat": 30, "agg": 40}
+        {"name": "Kohli", "agg": 70},
+        {"name": "Faf", "agg": 75},
+        {"name": "Maxwell", "agg": 95},
+        {"name": "DK", "agg": 90},
+        {"name": "Tailender", "agg": 40}
     ],
     "MI": [
-        {"name": "Rohit", "bat": 90, "agg": 70},
-        {"name": "Sky", "bat": 92, "agg": 90},
-        {"name": "Hardik", "bat": 88, "agg": 85},
-        {"name": "Tim David", "bat": 85, "agg": 95},
-        {"name": "Tailender", "bat": 30, "agg": 40}
+        {"name": "Rohit", "agg": 70},
+        {"name": "Sky", "agg": 90},
+        {"name": "Hardik", "agg": 85},
+        {"name": "Tim David", "agg": 95},
+        {"name": "Tailender", "agg": 40}
     ]
 }
 
-# ✅ Venues
+# Venues
 venues = {
     "Wankhede": {"batting": 1.2},
     "Chepauk": {"batting": 0.9}
@@ -41,7 +41,6 @@ venues = {
 def home():
     return {"message": "IPL Simulator API Running"}
 
-# ✅ Innings engine
 def play_innings(team, venue_factor, target=None):
     total_runs = 0
     wickets = 0
@@ -72,12 +71,12 @@ def play_innings(team, venue_factor, target=None):
             balls_left = 120 - balls
 
             if balls_left > 0:
-                required_rr = (runs_needed * 6) / balls_left
+                rr = (runs_needed * 6) / balls_left
 
-                if required_rr > 10:
+                if rr > 10:
                     weights[4] *= 1.5
                     weights[5] *= 1.5
-                elif required_rr < 6:
+                elif rr < 6:
                     weights[0] *= 1.2
 
         # Player aggression
@@ -107,8 +106,7 @@ def play_innings(team, venue_factor, target=None):
             continue
 
         elif outcome != "dot":
-            runs = int(outcome)
-            total_runs += int(runs * venue_factor)
+            total_runs += int(int(outcome) * venue_factor)
 
         # Chase complete
         if target and total_runs >= target:
@@ -117,37 +115,56 @@ def play_innings(team, venue_factor, target=None):
 
     return total_runs, wickets, commentary
 
-# ✅ Match simulation
 @app.post("/simulate")
 def simulate_match():
-    team1_name = "RCB"
-    team2_name = "MI"
-    venue_name = "Wankhede"
+    team1 = "RCB"
+    team2 = "MI"
+    venue = "Wankhede"
 
-    venue_factor = venues[venue_name]["batting"]
+    factor = venues[venue]["batting"]
 
-    score1, wk1, comm1 = play_innings(teams[team1_name], venue_factor)
-
+    score1, wk1, comm1 = play_innings(teams[team1], factor)
     target = score1 + 1
+    score2, wk2, comm2 = play_innings(teams[team2], factor, target)
 
-    score2, wk2, comm2 = play_innings(
-        teams[team2_name], venue_factor, target
-    )
-
+    # Winner + summary
     if score2 >= target:
-        winner = team2_name
-        summary = f"{team2_name} chased it down!"
+        winner = team2
+        summary = f"{team2} chased it down!"
     else:
-        winner = team1_name
-        summary = f"{team1_name} defended the total!"
+        winner = team1
+        summary = f"{team1} defended the total!"
+
+    # Match rating
+    diff = abs(score1 - score2)
+    if diff <= 5:
+        match_type = "🔥 Thriller!"
+    elif diff <= 15:
+        match_type = "😎 Close Match"
+    elif diff <= 30:
+        match_type = "🙂 Decent Game"
+    else:
+        match_type = "🥱 One-sided"
+
+    # Funny tags
+    if winner == "RCB" and score2 < target:
+        tag = "RCB actually defended? 😲"
+    elif winner == "MI" and score2 >= target:
+        tag = "MI chasing masterclass 💙"
+    elif score2 < target and score2 < score1 - 30:
+        tag = "Absolute domination 💀"
+    else:
+        tag = "Classic IPL chaos 😈"
 
     return {
-        "team1": team1_name,
+        "team1": team1,
         "score1": f"{score1}/{wk1}",
-        "team2": team2_name,
+        "team2": team2,
         "score2": f"{score2}/{wk2}",
         "winner": winner,
-        "venue": venue_name,
+        "venue": venue,
         "summary": summary,
+        "match_type": match_type,
+        "tag": tag,
         "commentary": comm1[-3:] + comm2[-5:]
     }
