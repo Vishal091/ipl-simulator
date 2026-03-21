@@ -43,33 +43,101 @@ def simulate_ball(p):
         20
     ]
     return random.choices(outcomes, weights=weights)[0]
+    def pick_bowlers(xi):
+    bowlers = []
 
+    for p in xi:
+        if p["role"] in ["BOWL", "AR"]:
+            bowlers.append({**p, "overs": 0})
+
+    # fallback if no bowlers
+    if len(bowlers) < 5:
+        bowlers = xi[:5]
+
+    return bowlers
+    def get_phase(over):
+    if over < 6:
+        return "powerplay"
+    elif over < 15:
+        return "middle"
+    return "death"
+    def simulate_ball(batter, bowler, phase):
+    bat = batter["bat"]
+    bowl = bowler["bowl"]
+
+    # phase modifiers
+    if phase == "powerplay":
+        bat *= 1.1
+    elif phase == "death":
+        bat *= 1.2
+        bowl *= 1.1
+
+    outcomes = ["dot","1","2","4","6","wicket"]
+
+    weights = [
+        30 + bowl * 0.2,
+        35,
+        10,
+        bat * 0.25,
+        bat * 0.15,
+        15 + bowl * 0.2
+    ]
+
+    return random.choices(outcomes, weights=weights)[0]
 def play_match(xi):
+
     score = 0
     wickets = 0
     log = []
+
     striker = 0
+    non_striker = 1
 
-    for ball in range(120):
-        if striker >= len(xi):
+    bowlers = pick_bowlers(xi)
+
+    for over in range(20):
+
+        phase = get_phase(over)
+
+        # pick bowler (least overs bowled)
+        bowler = sorted(bowlers, key=lambda x: x["overs"])[0]
+        bowler["overs"] += 1
+
+        for ball in range(6):
+
+            if striker >= len(xi):
+                break
+
+            batter = xi[striker]
+
+            res = simulate_ball(batter, bowler, phase)
+
+            if res == "wicket":
+                wickets += 1
+                log.append(f"{batter['name']} OUT ({bowler['name']})")
+                striker = max(striker, non_striker) + 1
+
+                if striker >= len(xi):
+                    break
+
+            elif res != "dot":
+                runs = int(res)
+                score += runs
+
+                if runs == 4:
+                    log.append(f"{batter['name']} hits FOUR")
+                elif runs == 6:
+                    log.append(f"{batter['name']} hits SIX")
+
+                # strike rotation
+                if runs % 2 == 1:
+                    striker, non_striker = non_striker, striker
+
+        # over end strike change
+        striker, non_striker = non_striker, striker
+
+        if wickets >= 10:
             break
-
-        player = xi[striker]
-        res = simulate_ball(player)
-
-        if res == "wicket":
-            wickets += 1
-            log.append(f"{player['name']} OUT")
-            striker += 1
-
-        elif res != "dot":
-            runs = int(res)
-            score += runs
-
-            if runs == 4:
-                log.append(f"{player['name']} hits FOUR")
-            elif runs == 6:
-                log.append(f"{player['name']} hits SIX")
 
     return score, wickets, log
 
