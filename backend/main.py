@@ -124,6 +124,10 @@ def play_innings(xi, target=0):
 
     bowlers = pick_bowlers(xi)
 
+    # 🔥 NEW
+    batter_stats = {p["name"]: {"runs": 0, "balls": 0} for p in xi}
+    bowler_stats = {b["name"]: {"runs": 0, "balls": 0, "wickets": 0} for b in bowlers}
+
     for over in range(20):
 
         phase = get_phase(over)
@@ -135,26 +139,33 @@ def play_innings(xi, target=0):
             if striker >= len(xi):
                 break
 
-            balls_left = (20 - over) * 6 - ball
+            balls_left = max((20 - over) * 6 - ball - 1, 1)
             pressure = calculate_pressure(score, target, balls_left)
 
             batter = xi[striker]
 
             res = simulate_ball(batter, bowler, phase, pressure)
 
+            # update balls
+            batter_stats[batter["name"]]["balls"] += 1
+            bowler_stats[bowler["name"]]["balls"] += 1
+
             if res == "wicket":
                 wickets += 1
+                bowler_stats[bowler["name"]]["wickets"] += 1
                 log.append(f"{batter['name']} OUT ({bowler['name']})")
 
                 next_batter = max(striker, non_striker) + 1
-                striker = next_batter
-
-                if striker >= len(xi):
+                if next_batter >= len(xi):
                     break
+                striker = next_batter
 
             elif res != "dot":
                 runs = int(res)
+
                 score += runs
+                batter_stats[batter["name"]]["runs"] += runs
+                bowler_stats[bowler["name"]]["runs"] += runs
 
                 if runs == 4:
                     log.append(f"{batter['name']} hits FOUR")
@@ -162,23 +173,28 @@ def play_innings(xi, target=0):
                     log.append(f"{batter['name']} hits SIX")
 
                 if target and score >= target:
-                    return score, wickets, log
+                    return score, wickets, log, batter_stats, bowler_stats
 
                 if runs % 2 == 1:
                     striker, non_striker = non_striker, striker
+
+            else:
+                bowler_stats[bowler["name"]]["runs"] += 0
 
         striker, non_striker = non_striker, striker
 
         if wickets >= 10:
             break
 
-    return score, wickets, log
+    return score, wickets, log, batter_stats, bowler_stats
 
 # ================= FULL MATCH =================
 def play_full_match(team1_xi, team2_xi):
-    s1, w1, log1 = play_innings(team1_xi)
+
+    s1, w1, log1, bat1, bowl1 = play_innings(team1_xi)
     target = s1 + 1
-    s2, w2, log2 = play_innings(team2_xi, target)
+
+    s2, w2, log2, bat2, bowl2 = play_innings(team2_xi, target)
 
     winner = "You" if s2 >= target else "Opponent"
 
@@ -187,7 +203,11 @@ def play_full_match(team1_xi, team2_xi):
         "innings2": f"{s2}/{w2}",
         "target": target,
         "winner": winner,
-        "log": (log1 + log2)[-15:]
+        "log": (log1 + log2)[-10:],
+        "batting1": bat1,
+        "batting2": bat2,
+        "bowling1": bowl1,
+        "bowling2": bowl2
     }
 
 # ================= ROUTES =================
