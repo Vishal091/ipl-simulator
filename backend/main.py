@@ -139,14 +139,22 @@ def real_match(data: dict):
     }
 @app.post("/tournament-match")
 def tournament_match(data: dict):
-    xi = data["xi"]
-    mode = data.get("mode", "quick")
+    xi_names = data["xi"]
+
+    # convert names → player objects
+    all_players = sum(teams.values(), [])
+
+    xi = []
+    for name in xi_names:
+        player = next((p for p in all_players if p["name"] == name), None)
+        if player:
+            xi.append(player)
 
     score, wk, log = play_match(xi)
 
     return {
         "score": f"{score}/{wk}",
-        "log": log if mode == "ball" else log[-5:]
+        "log": log[-5:]
     }
 
 # ================= CAREER MODE =================
