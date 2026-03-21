@@ -82,7 +82,27 @@ export default function Home() {
       <h3>Playing XI ({xi.length}/11)</h3>
 
       <button onClick={playMatch}>Play Match</button>
+      {result.batting2 && (
+  <div>
+    <h3>Batting Scorecard</h3>
+    {Object.entries(result.batting2).map(([name, stats]) => (
+      <p key={name}>
+        {name}: {stats.runs} ({stats.balls}) SR: {((stats.runs / stats.balls) * 100).toFixed(1)}
+      </p>
+    ))}
+  </div>
+)}
 
+{result.bowling1 && (
+  <div>
+    <h3>Bowling Figures</h3>
+    {Object.entries(result.bowling1).map(([name, stats]) => (
+      <p key={name}>
+        {name}: {stats.wickets}/{stats.runs} in {(stats.balls/6).toFixed(1)} overs
+      </p>
+    ))}
+  </div>
+)}
       {result && (
         <div>
           <h2>{result.score}</h2>
