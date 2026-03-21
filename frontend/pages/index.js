@@ -23,22 +23,6 @@ export default function Home() {
     setLoading(false);
   };
 
-  const copyResult = () => {
-    if (!result) return;
-
-    const text = `
-${result.team1}: ${result.score1}
-${result.team2}: ${result.score2}
-
-Winner: ${result.winner}
-${result.match_type}
-${result.tag}
-    `;
-
-    navigator.clipboard.writeText(text);
-    alert("Copied! 🔥");
-  };
-
   return (
     <div style={{ padding: 30, fontFamily: "Arial" }}>
       <h1>🏏 IPL Simulator</h1>
@@ -48,10 +32,10 @@ ${result.tag}
       </button>
 
       <button onClick={runTournament} disabled={loading} style={{ marginLeft: 10 }}>
-        Run Tournament 🏆
+        Run Full IPL 🏆
       </button>
 
-      {/* MATCH RESULT */}
+      {/* MATCH */}
       {result && (
         <div style={{ marginTop: 30 }}>
           <h2>{result.team1} vs {result.team2}</h2>
@@ -63,26 +47,30 @@ ${result.tag}
           <p>{result.summary}</p>
 
           <h2>{result.match_type}</h2>
-          <p>{result.tag}</p>
 
-          <h3>🔥 Key Moments</h3>
+          <h3>🔥 Moments</h3>
           {result.commentary.map((c, i) => (
             <p key={i}>• {c}</p>
           ))}
-
-          <button onClick={copyResult}>📋 Copy Result</button>
         </div>
       )}
 
-      {/* TOURNAMENT TABLE */}
+      {/* TOURNAMENT */}
       {table && (
         <div style={{ marginTop: 30 }}>
           <h2>🏆 Points Table</h2>
 
-          {Object.entries(table).map(([team, stats]) => (
-            <p key={team}>
-              {team} - {stats.points} pts (W: {stats.won}, L: {stats.lost})
-            </p>
+          {Object.entries(table.points_table)
+            .sort((a, b) => b[1].points - a[1].points)
+            .map(([team, stats]) => (
+              <p key={team}>
+                {team} - {stats.points} pts (W: {stats.won}, L: {stats.lost})
+              </p>
+            ))}
+
+          <h3>📅 Matches</h3>
+          {table.matches.slice(0, 15).map((m, i) => (
+            <p key={i}>{m.match} → {m.winner}</p>
           ))}
         </div>
       )}
