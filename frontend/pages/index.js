@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function Home() {
+export default function Home() {string
   const API = "https://ipl-simulator-tb8n.onrender.com";
 
   const [teams, setTeams] = useState([]);
@@ -41,7 +41,9 @@ const playReal = async () => {
     const res = await fetch(API + "/tournament-match", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ xi })
+    body: JSON.stringify({
+  xi: xi   
+})
 }  );
 
     setResult(await res.json());
