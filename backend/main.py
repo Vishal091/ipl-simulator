@@ -4,7 +4,6 @@ import random
 
 app = FastAPI()
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,7 +12,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# TEAMS (All 10 IPL teams)
 teams = {
     "RCB": [{"name": "Kohli", "agg": 70}, {"name": "Maxwell", "agg": 95}],
     "MI": [{"name": "Rohit", "agg": 70}, {"name": "Sky", "agg": 90}],
@@ -27,163 +25,116 @@ teams = {
     "LSG": [{"name": "KL Rahul", "agg": 70}, {"name": "Stoinis", "agg": 90}],
 }
 
-venues = {
-    "Wankhede": {"batting": 1.2},
-    "Chepauk": {"batting": 0.9}
-}
-
+venues = {"Wankhede": {"batting": 1.2}}
 tournament_teams = list(teams.keys())
 
 @app.get("/")
 def home():
     return {"message": "IPL Simulator API Running"}
 
-# -------- INNINGS ENGINE --------
-def play_innings(team, venue_factor, target=None):
-    total_runs = 0
+# -------- INNINGS --------
+def play_innings(team, factor, target=None):
+    total = 0
     wickets = 0
     balls = 0
-    striker_index = 0
-    commentary = []
+    i = 0
 
     while balls < 120:
-        if striker_index >= len(team):
+        if i >= len(team):
             break
 
-        player = team[striker_index]
+        player = team[i]
         balls += 1
         over = balls // 6
 
-        # Phase logic
         if over < 6:
-            weights = [25, 30, 10, 20, 10, 5]
+            w = [25, 30, 10, 20, 10, 5]
         elif over < 16:
-            weights = [35, 35, 10, 10, 3, 7]
+            w = [35, 35, 10, 10, 3, 7]
         else:
-            weights = [20, 25, 10, 20, 15, 10]
+            w = [20, 25, 10, 20, 15, 10]
 
-        # Pressure
         if target:
-            runs_needed = target - total_runs
-            balls_left = 120 - balls
-            if balls_left > 0:
-                rr = (runs_needed * 6) / balls_left
+            need = target - total
+            left = 120 - balls
+            if left > 0:
+                rr = (need * 6) / left
                 if rr > 10:
-                    weights[4] *= 1.5
-                    weights[5] *= 1.5
-                elif rr < 6:
-                    weights[0] *= 1.2
+                    w[4] *= 1.5
+                    w[5] *= 1.5
 
-        # Player aggression
-        aggression = player["agg"] / 100
-        weights[3] *= aggression
-        weights[4] *= aggression
-        weights[5] *= (1.2 - aggression)
+        agg = player["agg"] / 100
+        w[3] *= agg
+        w[4] *= agg
+        w[5] *= (1.2 - agg)
 
         outcome = random.choices(
-            ["dot", "1", "2", "4", "6", "wicket"],
-            weights=weights
+            ["dot", "1", "2", "4", "6", "wicket"], weights=w
         )[0]
 
-        if outcome == "6":
-            commentary.append(f"{player['name']} smashes a SIX!")
-            total_runs += int(6 * venue_factor)
-
-        elif outcome == "4":
-            commentary.append(f"{player['name']} hits a FOUR!")
-            total_runs += int(4 * venue_factor)
-
-        elif outcome == "wicket":
-            commentary.append(f"WICKET! {player['name']} is out!")
+        if outcome == "wicket":
             wickets += 1
-            striker_index += 1
+            i += 1
             continue
-
         elif outcome != "dot":
-            total_runs += int(int(outcome) * venue_factor)
+            total += int(outcome) * factor
 
-        if target and total_runs >= target:
-            commentary.append("CHASE COMPLETED!")
+        if target and total >= target:
             break
 
-    return total_runs, wickets, commentary
+    return total
 
 # -------- MATCH --------
-@app.post("/simulate")
-def simulate_match():
-    team1 = "RCB"
-    team2 = "MI"
-    venue = "Wankhede"
+def simulate_game(t1, t2):
+    factor = venues["Wankhede"]["batting"]
 
-    factor = venues[venue]["batting"]
+    s1 = play_innings(teams[t1], factor)
+    target = s1 + 1
+    s2 = play_innings(teams[t2], factor, target)
 
-    score1, wk1, comm1 = play_innings(teams[team1], factor)
-    target = score1 + 1
-    score2, wk2, comm2 = play_innings(teams[team2], factor, target)
-
-    winner = team2 if score2 >= target else team1
-    summary = f"{winner} won the match!"
-
-    diff = abs(score1 - score2)
-    match_type = "🔥 Thriller!" if diff <= 5 else "😎 Close Match" if diff <= 15 else "🥱 One-sided"
-
-    return {
-        "team1": team1,
-        "score1": f"{score1}/{wk1}",
-        "team2": team2,
-        "score2": f"{score2}/{wk2}",
-        "winner": winner,
-        "venue": venue,
-        "summary": summary,
-        "match_type": match_type,
-        "commentary": comm1[-3:] + comm2[-5:]
-    }
+    return t2 if s2 >= target else t1
 
 # -------- TOURNAMENT --------
-def generate_schedule():
-    matches = []
+def run_league():
+    table = {t: {"pts": 0} for t in tournament_teams}
+
     for i in range(len(tournament_teams)):
         for j in range(i + 1, len(tournament_teams)):
-            matches.append((tournament_teams[i], tournament_teams[j]))
-    return matches
+            t1 = tournament_teams[i]
+            t2 = tournament_teams[j]
 
-def init_points_table():
+            winner = simulate_game(t1, t2)
+            table[winner]["pts"] += 2
+
+    sorted_table = sorted(table.items(), key=lambda x: x[1]["pts"], reverse=True)
+    return [team for team, _ in sorted_table[:4]], sorted_table
+
+# -------- PLAYOFFS --------
+def run_playoffs(top4):
+    q1_winner = simulate_game(top4[0], top4[1])
+    q1_loser = top4[1] if q1_winner == top4[0] else top4[0]
+
+    eliminator_winner = simulate_game(top4[2], top4[3])
+
+    q2_winner = simulate_game(q1_loser, eliminator_winner)
+
+    final_winner = simulate_game(q1_winner, q2_winner)
+
     return {
-        team: {"played": 0, "won": 0, "lost": 0, "points": 0}
-        for team in tournament_teams
+        "qualifier1": q1_winner,
+        "eliminator": eliminator_winner,
+        "qualifier2": q2_winner,
+        "champion": final_winner
     }
 
-def simulate_game(team1, team2):
-    factor = venues["Wankhede"]["batting"]
-    score1, _, _ = play_innings(teams[team1], factor)
-    target = score1 + 1
-    score2, _, _ = play_innings(teams[team2], factor, target)
-    return team2 if score2 >= target else team1
-
-def run_tournament():
-    table = init_points_table()
-    matches = generate_schedule()
-    results = []
-
-    for t1, t2 in matches:
-        winner = simulate_game(t1, t2)
-
-        table[t1]["played"] += 1
-        table[t2]["played"] += 1
-
-        if winner == t1:
-            table[t1]["won"] += 1
-            table[t1]["points"] += 2
-            table[t2]["lost"] += 1
-        else:
-            table[t2]["won"] += 1
-            table[t2]["points"] += 2
-            table[t1]["lost"] += 1
-
-        results.append({"match": f"{t1} vs {t2}", "winner": winner})
-
-    return {"points_table": table, "matches": results}
-
+# -------- API --------
 @app.get("/tournament")
-def tournament():
-    return run_tournament()
+def full_ipl():
+    top4, table = run_league()
+    playoffs = run_playoffs(top4)
+
+    return {
+        "points_table": table,
+        "top4": top4,
+        "playoffs": playoffs
+    }
