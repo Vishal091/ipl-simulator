@@ -2,12 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import random
+import os
+
 app = FastAPI()
-
-@app.get("/")
-def home():
-    return {"message": "IPL Simulator API is running 🚀"}
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,14 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ================= DATA =================
-import os
-PITCHES = [
-    {"name": "Mumbai", "bat": 1.2, "spin": 0.8, "pace": 1.0},
-    {"name": "Chennai", "bat": 0.9, "spin": 1.3, "pace": 0.9},
-    {"name": "Bangalore", "bat": 1.4, "spin": 0.8, "pace": 1.0},
-    {"name": "Kolkata", "bat": 1.1, "spin": 1.2, "pace": 0.9},
-]
+# ================= LOAD CSV =================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 csv_path = os.path.join(BASE_DIR, "data", "ipl_2026.csv")
 
@@ -42,50 +32,34 @@ for _, row in df.iterrows():
 TEAM_NAMES = list(teams.keys())
 
 # ================= ENGINE =================
-def toss(team1, team2):
-    winner = random.choice([team1, team2])
-    decision = random.choice(["bat", "bowl"])
-    return winner, decision
-def simulate_ball(p, pitch):
-    base = p["bat"] * pitch["bat"]
-
+def simulate_ball(p):
     outcomes = ["dot","1","2","4","6","wicket"]
-
     weights = [
-        25,
+        30,
         30,
         10,
-        base * 0.25,
-        base * 0.15,
-        20 - (p["bat"] * 0.1)
+        p["bat"] * 0.25,
+        p["bat"] * 0.15,
+        20
     ]
-
     return random.choices(outcomes, weights=weights)[0]
 
-def play_match(xi, impact=None):
-    pitch = random.choice(PITCHES)
-
-    score, wk, log = 0, 0, []
+def play_match(xi):
+    score = 0
+    wickets = 0
+    log = []
     striker = 0
 
     for ball in range(120):
-
         if striker >= len(xi):
             break
 
         player = xi[striker]
-
-        res = simulate_ball(player, pitch)
+        res = simulate_ball(player)
 
         if res == "wicket":
-            wk += 1
+            wickets += 1
             log.append(f"{player['name']} OUT")
-
-            # IMPACT PLAYER
-            if impact and wk == 3:
-                xi.append(impact)
-                log.append(f"Impact Player {impact['name']} IN")
-
             striker += 1
 
         elif res != "dot":
@@ -97,7 +71,7 @@ def play_match(xi, impact=None):
             elif runs == 6:
                 log.append(f"{player['name']} hits SIX")
 
-    return score, wk, log, pitch["name"]
+    return score, wickets, log
 
 # ================= QUICK MATCH =================
 @app.post("/quick-match")
@@ -125,68 +99,60 @@ def get_teams():
 @app.get("/team/{team}")
 def get_team(team: str):
     return teams.get(team, [])
-@app.post("/real-match")
-def real_match(data: dict):
-    xi = data["xi"]
-    impact = data.get("impact")
 
-    score, wk, log, pitch = play_match(xi, impact)
-
-    return {
-        "score": f"{score}/{wk}",
-        "pitch": pitch,
-        "log": log[-10:]
-    }
-@app.post("/tournament-match")
 @app.post("/tournament-match")
 def tournament_match(data: dict):
 
     if "xi" not in data or not data["xi"]:
         return {"error": "No XI selected"}
 
-    xi = data["xi"]  # ✅ already full objects
+    xi = data["xi"]
 
-    if len(xi) < 1:
-        return {"error": "Invalid XI"}
+    if len(xi) != 11:
+        return {"error": "XI must be 11 players"}
 
-    score, wk, log = play_match(xi)
+    score, wickets, log = play_match(xi)
 
     return {
-        "score": f"{score}/{wk}",
-        "log": log[-5:]
+        "score": f"{score}/{wickets}",
+        "log": log[-10:]
     }
 
 # ================= CAREER MODE =================
-player = {
+career_player = {
     "name": "",
     "runs": 0,
     "matches": 0,
-    "agg": 75
+    "form": 70
 }
 
 @app.post("/create-player")
-def create_player(name: str):
-    player["name"] = name
-    player["runs"] = 0
-    player["matches"] = 0
-    return {"msg": "created"}
+def create_player(data: dict):
+    career_player["name"] = data["name"]
+    career_player["runs"] = 0
+    career_player["matches"] = 0
+    career_player["form"] = 70
+    return {"msg": "Player created", "player": career_player}
 
 @app.get("/career-match")
 def career_match():
-    runs = random.randint(10, player["agg"])
-    player["runs"] += runs
-    player["matches"] += 1
+    runs = random.randint(0, career_player["form"])
+
+    career_player["runs"] += runs
+    career_player["matches"] += 1
 
     return {
-        "runs": runs,
-        "stats": player
+        "match_runs": runs,
+        "career": career_player
     }
 
 @app.post("/press")
-def press(choice: str):
-    if choice == "confident":
-        player["agg"] += 5
-    else:
-        player["agg"] -= 2
+def press(data: dict):
+    choice = data["choice"]
 
-    return player
+    if choice == "confident":
+        career_player["form"] += 5
+    else:
+        career_player["form"] -= 3
+
+    return career_player
