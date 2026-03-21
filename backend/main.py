@@ -43,6 +43,24 @@ def simulate_ball(p):
         20
     ]
     return random.choices(outcomes, weights=weights)[0]
+def calculate_pressure(score, target, balls_left):
+    if target == 0:
+        return 1.0
+
+    runs_needed = target - score
+    if runs_needed <= 0:
+        return 0.8  # low pressure (already won)
+
+    rrr = runs_needed / (balls_left / 6)
+
+    if rrr < 6:
+        return 0.9
+    elif rrr < 9:
+        return 1.0
+    elif rrr < 12:
+        return 1.2
+    else:
+        return 1.5
 def pick_bowlers(xi):
     bowlers = []
 
@@ -55,22 +73,105 @@ def pick_bowlers(xi):
         bowlers = xi[:5]
 
     return bowlers
+def play_innings(xi, target=0):
+
+    score = 0
+    wickets = 0
+    log = []
+
+    striker = 0
+    non_striker = 1
+
+    bowlers = pick_bowlers(xi)
+
+    for over in range(20):
+
+        phase = get_phase(over)
+
+        bowler = sorted(bowlers, key=lambda x: x["overs"])[0]
+        bowler["overs"] += 1
+
+        for ball in range(6):
+
+            balls_left = (20 - over) * 6 - ball
+
+            pressure = calculate_pressure(score, target, balls_left)
+
+            batter = xi[striker]
+
+            res = simulate_ball(batter, bowler, phase, pressure)
+
+            if res == "wicket":
+                wickets += 1
+                log.append(f"{batter['name']} OUT ({bowler['name']})")
+                striker = max(striker, non_striker) + 1
+
+                if striker >= len(xi):
+                    break
+
+            elif res != "dot":
+                runs = int(res)
+                score += runs
+
+                if runs == 4:
+                    log.append(f"{batter['name']} hits FOUR")
+                elif runs == 6:
+                    log.append(f"{batter['name']} hits SIX")
+
+                # chase complete
+                if target and score >= target:
+                    return score, wickets, log
+
+                if runs % 2 == 1:
+                    striker, non_striker = non_striker, striker
+
+        striker, non_striker = non_striker, striker
+
+        if wickets >= 10:
+            break
+
+    return score, wickets, log
+def play_full_match(team1_xi, team2_xi):
+
+    # toss
+    first, second = team1_xi, team2_xi
+
+    # innings 1
+    s1, w1, log1 = play_innings(first)
+
+    target = s1 + 1
+
+    # innings 2
+    s2, w2, log2 = play_innings(second, target)
+
+    winner = "Team 1" if s1 > s2 else "Team 2"
+
+    return {
+        "innings1": f"{s1}/{w1}",
+        "innings2": f"{s2}/{w2}",
+        "target": target,
+        "winner": winner,
+        "log": (log1 + log2)[-15:]
+    }
 def get_phase(over):
     if over < 6:
         return "powerplay"
     elif over < 15:
         return "middle"
     return "death"
-def simulate_ball(batter, bowler, phase):
+def simulate_ball(batter, bowler, phase, pressure):
     bat = batter["bat"]
     bowl = bowler["bowl"]
 
-    # phase modifiers
+    # phase boost
     if phase == "powerplay":
         bat *= 1.1
     elif phase == "death":
         bat *= 1.2
         bowl *= 1.1
+
+    # pressure effect
+    bat /= pressure
 
     outcomes = ["dot","1","2","4","6","wicket"]
 
@@ -80,7 +181,7 @@ def simulate_ball(batter, bowler, phase):
         10,
         bat * 0.25,
         bat * 0.15,
-        15 + bowl * 0.2
+        15 + bowl * 0.25
     ]
 
     return random.choices(outcomes, weights=weights)[0]
@@ -171,20 +272,18 @@ def get_team(team: str):
 @app.post("/tournament-match")
 def tournament_match(data: dict):
 
-    if "xi" not in data or not data["xi"]:
-        return {"error": "No XI selected"}
-
     xi = data["xi"]
 
     if len(xi) != 11:
-        return {"error": "XI must be 11 players"}
+        return {"error": "Select 11 players"}
 
-    score, wickets, log = play_match(xi)
+    # random opponent
+    opponent_team = random.choice(TEAM_NAMES)
+    opponent_xi = teams[opponent_team][:11]
 
-    return {
-        "score": f"{score}/{wickets}",
-        "log": log[-10:]
-    }
+    result = play_full_match(xi, opponent_xi)
+
+    return result
 
 # ================= CAREER MODE =================
 career_player = {
