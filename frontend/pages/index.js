@@ -1,77 +1,40 @@
 import { useState } from "react";
 
 export default function Home() {
-  const [result, setResult] = useState(null);
-  const [table, setTable] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState(null);
 
-  const simulateMatch = async () => {
-    setLoading(true);
-    const res = await fetch("https://ipl-simulator-tb8n.onrender.com/simulate", { method: "POST" });
-    const data = await res.json();
-    setResult(data);
-    setTable(null);
-    setLoading(false);
-  };
-
-  const runTournament = async () => {
-    setLoading(true);
+  const runIPL = async () => {
     const res = await fetch("https://ipl-simulator-tb8n.onrender.com/tournament");
-    const data = await res.json();
-    setTable(data);
-    setResult(null);
-    setLoading(false);
+    const d = await res.json();
+    setData(d);
   };
 
   return (
-    <div style={{ padding: 30, fontFamily: "Arial" }}>
+    <div style={{ padding: 30 }}>
       <h1>🏏 IPL Simulator</h1>
 
-      <button onClick={simulateMatch} disabled={loading}>
-        Simulate Match
-      </button>
+      <button onClick={runIPL}>Run Full IPL 🏆</button>
 
-      <button onClick={runTournament} disabled={loading} style={{ marginLeft: 10 }}>
-        Run Full IPL 🏆
-      </button>
-
-      {/* MATCH */}
-      {result && (
+      {data && (
         <div style={{ marginTop: 30 }}>
-          <h2>{result.team1} vs {result.team2}</h2>
-
-          <p>{result.team1}: <b>{result.score1}</b></p>
-          <p>{result.team2}: <b>{result.score2}</b></p>
-
-          <h3>🏆 {result.winner}</h3>
-          <p>{result.summary}</p>
-
-          <h2>{result.match_type}</h2>
-
-          <h3>🔥 Moments</h3>
-          {result.commentary.map((c, i) => (
-            <p key={i}>• {c}</p>
+          <h2>📊 Points Table</h2>
+          {data.points_table.map(([team, stats], i) => (
+            <p key={i}>
+              {team} - {stats.pts} pts
+            </p>
           ))}
-        </div>
-      )}
 
-      {/* TOURNAMENT */}
-      {table && (
-        <div style={{ marginTop: 30 }}>
-          <h2>🏆 Points Table</h2>
-
-          {Object.entries(table.points_table)
-            .sort((a, b) => b[1].points - a[1].points)
-            .map(([team, stats]) => (
-              <p key={team}>
-                {team} - {stats.points} pts (W: {stats.won}, L: {stats.lost})
-              </p>
-            ))}
-
-          <h3>📅 Matches</h3>
-          {table.matches.slice(0, 15).map((m, i) => (
-            <p key={i}>{m.match} → {m.winner}</p>
+          <h2>🔥 Top 4</h2>
+          {data.top4.map((t, i) => (
+            <p key={i}>{i + 1}. {t}</p>
           ))}
+
+          <h2>🏆 Playoffs</h2>
+          <p>Qualifier 1 Winner: {data.playoffs.qualifier1}</p>
+          <p>Eliminator Winner: {data.playoffs.eliminator}</p>
+          <p>Qualifier 2 Winner: {data.playoffs.qualifier2}</p>
+
+          <h1>👑 Champion: {data.playoffs.champion}</h1>
         </div>
       )}
     </div>
