@@ -43,7 +43,7 @@ def simulate_ball(p):
         20
     ]
     return random.choices(outcomes, weights=weights)[0]
-    def pick_bowlers(xi):
+def pick_bowlers(xi):
     bowlers = []
 
     for p in xi:
@@ -55,13 +55,13 @@ def simulate_ball(p):
         bowlers = xi[:5]
 
     return bowlers
-    def get_phase(over):
+def get_phase(over):
     if over < 6:
         return "powerplay"
     elif over < 15:
         return "middle"
     return "death"
-    def simulate_ball(batter, bowler, phase):
+def simulate_ball(batter, bowler, phase):
     bat = batter["bat"]
     bowl = bowler["bowl"]
 
