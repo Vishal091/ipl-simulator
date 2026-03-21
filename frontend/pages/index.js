@@ -3,82 +3,68 @@ import { useState } from "react";
 export default function Home() {
   const API = "https://ipl-simulator-tb8n.onrender.com";
 
-  const [match, setMatch] = useState(null);
-  const [tournament, setTournament] = useState(null);
-  const [career, setCareer] = useState(null);
-  const [name, setName] = useState("");
+  const [teams, setTeams] = useState([]);
+  const [team, setTeam] = useState("");
+  const [squad, setSquad] = useState([]);
+  const [xi, setXi] = useState([]);
+  const [result, setResult] = useState(null);
 
-  const simulateMatch = async () => {
-    const res = await fetch(API + "/simulate", { method: "POST" });
-    setMatch(await res.json());
-    setTournament(null);
-    setCareer(null);
+  const loadTeams = async () => {
+    const res = await fetch(API + "/teams");
+    setTeams(await res.json());
   };
 
-  const runTournament = async () => {
-    const res = await fetch(API + "/tournament");
-    setTournament(await res.json());
-    setMatch(null);
-    setCareer(null);
+  const loadSquad = async () => {
+    const res = await fetch(`${API}/team/${team}`);
+    setSquad(await res.json());
   };
 
-  const createPlayer = async () => {
-    await fetch(`${API}/create-player?name=${name}`, { method: "POST" });
-    alert("Player Created");
+  const toggle = (p) => {
+    if (xi.includes(p)) {
+      setXi(xi.filter(x => x !== p));
+    } else if (xi.length < 11) {
+      setXi([...xi, p]);
+    }
   };
 
-  const playCareer = async () => {
-    const res = await fetch(API + "/career-match");
-    setCareer(await res.json());
-    setMatch(null);
-    setTournament(null);
+  const play = async () => {
+    const res = await fetch(API + "/play", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ xi })
+    });
+
+    setResult(await res.json());
   };
 
   return (
-    <div style={{ padding: 30 }}>
-      <h1>🏏 IPL Simulator</h1>
+    <div style={{padding:20}}>
+      <h1>🏏 IPL Tournament</h1>
 
-      <button onClick={simulateMatch}>Match Mode</button>
-      <button onClick={runTournament}>Tournament</button>
-      <button onClick={playCareer}>Career Mode</button>
+      <button onClick={loadTeams}>Load Teams</button>
 
-      {/* MATCH */}
-      {match && (
+      <select onChange={(e)=>setTeam(e.target.value)}>
+        <option>Select Team</option>
+        {teams.map(t=><option key={t}>{t}</option>)}
+      </select>
+
+      <button onClick={loadSquad}>Load Squad</button>
+
+      <h3>Squad</h3>
+      {squad.map((p,i)=>(
+        <p key={i} onClick={()=>toggle(p)}>
+          {p.name} ({p.role})
+        </p>
+      ))}
+
+      <h3>Playing XI ({xi.length}/11)</h3>
+
+      <button onClick={play}>Play Match</button>
+
+      {result && (
         <div>
-          <h2>{match.team1} vs {match.team2}</h2>
-          <p>{match.score1}</p>
-          <p>{match.score2}</p>
-          <h3>Winner: {match.winner}</h3>
-        </div>
-      )}
-
-      {/* TOURNAMENT */}
-      {tournament && (
-        <div>
-          <h2>Points Table</h2>
-          {tournament.points_table.map(([t, s], i) => (
-            <p key={i}>{t} - {s.pts}</p>
-          ))}
-          <h2>Champion: {tournament.playoffs.champion}</h2>
-        </div>
-      )}
-
-      {/* CAREER */}
-      <div>
-        <h2>Career Mode</h2>
-        <input value={name} onChange={(e) => setName(e.target.value)} />
-        <button onClick={createPlayer}>Create Player</button>
-      </div>
-
-      {career && (
-        <div>
-          <p>{career.team_score} vs {career.opp_score}</p>
-          <h3>You scored: {career.player_runs}</h3>
-          <h2>{career.result}</h2>
-
-          <p>Matches: {career.stats.matches}</p>
-          <p>Runs: {career.stats.runs}</p>
-          <p>Form: {career.stats.form}</p>
+          <h2>{result.score}</h2>
+          {result.log.map((l,i)=><p key={i}>{l}</p>)}
         </div>
       )}
     </div>
