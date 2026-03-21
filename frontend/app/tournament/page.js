@@ -77,6 +77,13 @@ const playMatch = async () => {
       </div>
 
       <h3>Playing XI: {xi.length}/11</h3>
+          <button
+  className="glow-btn"
+  onClick={playMatch}
+  style={{ marginTop: "20px" }}
+>
+  ▶ Play Match
+</button>
     </div>
   );
 }
