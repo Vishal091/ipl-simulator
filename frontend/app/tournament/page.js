@@ -18,7 +18,24 @@ export default function Tournament() {
     const res = await fetch(`${API}/team/${team}`);
     setSquad(await res.json());
   };
+const playMatch = async () => {
+  if (xi.length !== 11) {
+    alert("Select 11 players");
+    return;
+  }
 
+  const res = await fetch(API + "/tournament-match", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ xi })
+  });
+
+  const data = await res.json();
+
+  // 🔥 NEW FLOW
+  localStorage.setItem("matchData", JSON.stringify(data));
+  window.location.href = "/match";
+};
   const toggle = (p) => {
     const exists = xi.find(x => x.name === p.name);
     if (exists) {
