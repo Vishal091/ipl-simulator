@@ -6,52 +6,52 @@ const TEAM_CONFIG = {
   "Chennai Super Kings": {
     short: "CSK",
     color: "#FDB913",
-    logo: "https://upload.wikimedia.org/wikipedia/en/2/2e/Chennai_Super_Kings_Logo.svg"
+    logo: "https://scores.iplt20.com/ipl/teamlogos/CSK.png"
   },
   "Mumbai Indians": {
     short: "MI",
     color: "#004BA0",
-    logo: "https://upload.wikimedia.org/wikipedia/en/c/cd/Mumbai_Indians_Logo.svg"
+    logo: "https://scores.iplt20.com/ipl/teamlogos/MI.png"
   },
   "Royal Challengers Bengaluru": {
     short: "RCB",
     color: "#DA1818",
-    logo: "https://upload.wikimedia.org/wikipedia/en/4/4e/Royal_Challengers_Bangalore_Logo.svg"
+    logo: "https://scores.iplt20.com/ipl/teamlogos/RCB.png"
   },
   "Kolkata Knight Riders": {
     short: "KKR",
     color: "#3A225D",
-    logo: "https://upload.wikimedia.org/wikipedia/en/4/4c/Kolkata_Knight_Riders_Logo.svg"
+    logo: "https://scores.iplt20.com/ipl/teamlogos/KKR.png"
   },
   "Delhi Capitals": {
     short: "DC",
     color: "#17479E",
-    logo: "https://upload.wikimedia.org/wikipedia/en/2/2f/Delhi_Capitals.svg"
+    logo: "https://scores.iplt20.com/ipl/teamlogos/DC.png"
   },
   "Punjab Kings": {
     short: "PBKS",
     color: "#ED1B24",
-    logo: "https://upload.wikimedia.org/wikipedia/en/d/d4/Punjab_Kings_Logo.svg"
+    logo: "https://scores.iplt20.com/ipl/teamlogos/PBKS.png"
   },
   "Rajasthan Royals": {
     short: "RR",
     color: "#EA1A85",
-    logo: "https://upload.wikimedia.org/wikipedia/en/6/60/Rajasthan_Royals_Logo.svg"
+    logo: "https://scores.iplt20.com/ipl/teamlogos/RR.png"
   },
   "Sunrisers Hyderabad": {
     short: "SRH",
     color: "#FF822A",
-    logo: "https://upload.wikimedia.org/wikipedia/en/8/81/Sunrisers_Hyderabad.svg"
+    logo: "https://scores.iplt20.com/ipl/teamlogos/SRH.png"
   },
   "Lucknow Super Giants": {
     short: "LSG",
     color: "#00AEEF",
-    logo: "https://upload.wikimedia.org/wikipedia/en/2/2e/Lucknow_Super_Giants_IPL_Logo.svg"
+    logo: "https://scores.iplt20.com/ipl/teamlogos/LSG.png"
   },
   "Gujarat Titans": {
     short: "GT",
     color: "#1C1C1C",
-    logo: "https://upload.wikimedia.org/wikipedia/en/0/09/Gujarat_Titans_Logo.svg"
+    logo: "https://scores.iplt20.com/ipl/teamlogos/GT.png"
   }
 };
 
