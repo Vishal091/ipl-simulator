@@ -1,57 +1,71 @@
 "use client";
 import { useEffect, useState } from "react";
 
+// ================= TEAM NAME MAP =================
+const TEAM_NAME_MAP = {
+  "CSK": "Chennai Super Kings",
+  "MI": "Mumbai Indians",
+  "RCB": "Royal Challengers Bengaluru",
+  "KKR": "Kolkata Knight Riders",
+  "DC": "Delhi Capitals",
+  "PBKS": "Punjab Kings",
+  "RR": "Rajasthan Royals",
+  "SRH": "Sunrisers Hyderabad",
+  "LSG": "Lucknow Super Giants",
+  "GT": "Gujarat Titans"
+};
+
 // ================= TEAM CONFIG =================
 const TEAM_CONFIG = {
   "Chennai Super Kings": {
     short: "CSK",
     color: "#FDB913",
-    logo: "https://scores.iplt20.com/ipl/teamlogos/CSK.png"
+    logo: "/teams/csk.png"
   },
   "Mumbai Indians": {
     short: "MI",
     color: "#004BA0",
-    logo: "https://scores.iplt20.com/ipl/teamlogos/MI.png"
+    logo: "/teams/mi.png"
   },
   "Royal Challengers Bengaluru": {
     short: "RCB",
     color: "#DA1818",
-    logo: "https://scores.iplt20.com/ipl/teamlogos/RCB.png"
+    logo: "/teams/rcb.png"
   },
   "Kolkata Knight Riders": {
     short: "KKR",
     color: "#3A225D",
-    logo: "https://scores.iplt20.com/ipl/teamlogos/KKR.png"
+    logo: "/teams/kkr.png"
   },
   "Delhi Capitals": {
     short: "DC",
     color: "#17479E",
-    logo: "https://scores.iplt20.com/ipl/teamlogos/DC.png"
+    logo: "/teams/dc.png"
   },
   "Punjab Kings": {
     short: "PBKS",
     color: "#ED1B24",
-    logo: "https://scores.iplt20.com/ipl/teamlogos/PBKS.png"
+    logo: "/teams/pbks.png"
   },
   "Rajasthan Royals": {
     short: "RR",
     color: "#EA1A85",
-    logo: "https://scores.iplt20.com/ipl/teamlogos/RR.png"
+    logo: "/teams/rr.png"
   },
   "Sunrisers Hyderabad": {
     short: "SRH",
     color: "#FF822A",
-    logo: "https://scores.iplt20.com/ipl/teamlogos/SRH.png"
+    logo: "/teams/srh.png"
   },
   "Lucknow Super Giants": {
     short: "LSG",
     color: "#00AEEF",
-    logo: "https://scores.iplt20.com/ipl/teamlogos/LSG.png"
+    logo: "/teams/lsg.png"
   },
   "Gujarat Titans": {
     short: "GT",
     color: "#1C1C1C",
-    logo: "https://scores.iplt20.com/ipl/teamlogos/GT.png"
+    logo: "/teams/gt.png"
   }
 };
 
@@ -74,7 +88,6 @@ export default function Tournament() {
       const res = await fetch(API + "/teams");
       const data = await res.json();
 
-      // handle both formats
       if (Array.isArray(data)) {
         setTeams(data);
       } else if (data.teams) {
@@ -90,11 +103,12 @@ export default function Tournament() {
   };
 
   // ================= LOAD SQUAD =================
-  const loadSquad = async (teamName) => {
-    setSelectedTeam(teamName);
+  const loadSquad = async (teamCode) => {
+    const fullName = TEAM_NAME_MAP[teamCode] || teamCode;
+    setSelectedTeam(teamCode);
 
     try {
-      const res = await fetch(`${API}/team/${teamName}`);
+      const res = await fetch(`${API}/team/${teamCode}`);
       const data = await res.json();
 
       setSquad(data);
@@ -177,7 +191,8 @@ export default function Tournament() {
             }}
           >
             {teams.map((team, i) => {
-              const config = TEAM_CONFIG[team] || {};
+              const fullName = TEAM_NAME_MAP[team] || team;
+              const config = TEAM_CONFIG[fullName] || {};
 
               return (
                 <div
@@ -205,10 +220,21 @@ export default function Tournament() {
                   <img
                     src={config.logo}
                     alt={team}
-                    style={{ width: "60px", marginBottom: "10px" }}
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                    }}
+                    style={{
+                      width: "70px",
+                      height: "70px",
+                      objectFit: "contain",
+                      marginBottom: "10px"
+                    }}
                   />
-                  <h3>{config.short || team}</h3>
-                  <p style={{ fontSize: "12px", opacity: 0.7 }}>{team}</p>
+
+                  <h3>{team}</h3>
+                  <p style={{ fontSize: "12px", opacity: 0.7 }}>
+                    {fullName}
+                  </p>
                 </div>
               );
             })}
@@ -220,7 +246,7 @@ export default function Tournament() {
       {selectedTeam && (
         <>
           <h2 style={{ marginTop: "20px" }}>
-            {selectedTeam} Squad
+            {TEAM_NAME_MAP[selectedTeam] || selectedTeam} Squad
           </h2>
 
           <div
@@ -249,7 +275,6 @@ export default function Tournament() {
             ))}
           </div>
 
-          {/* XI */}
           <h3 style={{ marginTop: "20px" }}>
             Playing XI: {xi.length}/11
           </h3>
