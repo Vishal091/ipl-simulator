@@ -8,7 +8,58 @@ export default function Tournament() {
   const [selectedTeam, setSelectedTeam] = useState("");
   const [squad, setSquad] = useState([]);
   const [xi, setXi] = useState([]);
-
+const TEAM_CONFIG = {
+  "Chennai Super Kings": {
+    short: "CSK",
+    color: "#FDB913",
+    logo: "https://upload.wikimedia.org/wikipedia/en/2/2e/Chennai_Super_Kings_Logo.svg"
+  },
+  "Mumbai Indians": {
+    short: "MI",
+    color: "#004BA0",
+    logo: "https://upload.wikimedia.org/wikipedia/en/c/cd/Mumbai_Indians_Logo.svg"
+  },
+  "Royal Challengers Bengaluru": {
+    short: "RCB",
+    color: "#DA1818",
+    logo: "https://upload.wikimedia.org/wikipedia/en/4/4e/Royal_Challengers_Bangalore_Logo.svg"
+  },
+  "Kolkata Knight Riders": {
+    short: "KKR",
+    color: "#3A225D",
+    logo: "https://upload.wikimedia.org/wikipedia/en/4/4c/Kolkata_Knight_Riders_Logo.svg"
+  },
+  "Delhi Capitals": {
+    short: "DC",
+    color: "#17479E",
+    logo: "https://upload.wikimedia.org/wikipedia/en/2/2f/Delhi_Capitals.svg"
+  },
+  "Punjab Kings": {
+    short: "PBKS",
+    color: "#ED1B24",
+    logo: "https://upload.wikimedia.org/wikipedia/en/d/d4/Punjab_Kings_Logo.svg"
+  },
+  "Rajasthan Royals": {
+    short: "RR",
+    color: "#EA1A85",
+    logo: "https://upload.wikimedia.org/wikipedia/en/6/60/Rajasthan_Royals_Logo.svg"
+  },
+  "Sunrisers Hyderabad": {
+    short: "SRH",
+    color: "#FF822A",
+    logo: "https://upload.wikimedia.org/wikipedia/en/8/81/Sunrisers_Hyderabad.svg"
+  },
+  "Lucknow Super Giants": {
+    short: "LSG",
+    color: "#00AEEF",
+    logo: "https://upload.wikimedia.org/wikipedia/en/2/2e/Lucknow_Super_Giants_IPL_Logo.svg"
+  },
+  "Gujarat Titans": {
+    short: "GT",
+    color: "#1C1C1C",
+    logo: "https://upload.wikimedia.org/wikipedia/en/0/09/Gujarat_Titans_Logo.svg"
+  }
+};
   // ================= LOAD TEAMS =================
   useEffect(() => {
     loadTeams();
