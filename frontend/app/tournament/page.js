@@ -104,7 +104,6 @@ export default function Tournament() {
 
   // ================= LOAD SQUAD =================
   const loadSquad = async (teamCode) => {
-    const fullName = TEAM_NAME_MAP[teamCode] || teamCode;
     setSelectedTeam(teamCode);
 
     try {
@@ -220,9 +219,6 @@ export default function Tournament() {
                   <img
                     src={config.logo}
                     alt={team}
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                    }}
                     style={{
                       width: "70px",
                       height: "70px",
@@ -252,25 +248,63 @@ export default function Tournament() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-              gap: "10px",
+              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+              gap: "12px",
               marginTop: "15px",
             }}
           >
             {squad.map((p, i) => (
               <div
                 key={i}
-                className="card"
                 onClick={() => toggle(p)}
                 style={{
-                  border: xi.find((x) => x.name === p.name)
+                  cursor: "pointer",
+                  borderRadius: "14px",
+                  padding: "12px",
+                  background: "linear-gradient(145deg, #111, #1a1a1a)",
+                  border: xi.find(x => x.name === p.name)
                     ? "2px solid #00E5FF"
                     : "1px solid rgba(255,255,255,0.1)",
-                  cursor: "pointer",
+                  transition: "0.3s",
+                  position: "relative"
                 }}
               >
-                <h4>{p.name}</h4>
-                <p>{p.role}</p>
+                {/* RATING */}
+                <div style={{
+                  position: "absolute",
+                  top: "8px",
+                  right: "10px",
+                  fontSize: "18px",
+                  fontWeight: "bold",
+                  color: "#00E5FF"
+                }}>
+                  {p.agg}
+                </div>
+
+                {/* NAME */}
+                <h4 style={{ marginTop: "20px" }}>{p.name}</h4>
+
+                {/* ROLE */}
+                <div style={{
+                  display: "inline-block",
+                  padding: "2px 8px",
+                  borderRadius: "8px",
+                  fontSize: "10px",
+                  background: "#222",
+                  marginTop: "4px"
+                }}>
+                  {p.role}
+                </div>
+
+                {/* STATS */}
+                <div style={{
+                  marginTop: "10px",
+                  fontSize: "12px",
+                  opacity: 0.8
+                }}>
+                  <div>Bat: {p.bat}</div>
+                  <div>Bowl: {p.bowl}</div>
+                </div>
               </div>
             ))}
           </div>
