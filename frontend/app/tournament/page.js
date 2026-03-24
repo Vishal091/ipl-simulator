@@ -1,13 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-export default function Tournament() {
-  const API = "https://ipl-simulator-tb8n.onrender.com";
-
-  const [teams, setTeams] = useState([]);
-  const [selectedTeam, setSelectedTeam] = useState("");
-  const [squad, setSquad] = useState([]);
-  const [xi, setXi] = useState([]);
+// ================= TEAM CONFIG =================
 const TEAM_CONFIG = {
   "Chennai Super Kings": {
     short: "CSK",
@@ -60,6 +54,16 @@ const TEAM_CONFIG = {
     logo: "https://upload.wikimedia.org/wikipedia/en/0/09/Gujarat_Titans_Logo.svg"
   }
 };
+
+export default function Tournament() {
+  const API = "https://ipl-simulator-tb8n.onrender.com";
+
+  const [teams, setTeams] = useState([]);
+  const [selectedTeam, setSelectedTeam] = useState("");
+  const [squad, setSquad] = useState([]);
+  const [xi, setXi] = useState([]);
+  const [loading, setLoading] = useState(false);
+
   // ================= LOAD TEAMS =================
   useEffect(() => {
     loadTeams();
@@ -69,7 +73,17 @@ const TEAM_CONFIG = {
     try {
       const res = await fetch(API + "/teams");
       const data = await res.json();
-      setTeams(data);
+
+      // handle both formats
+      if (Array.isArray(data)) {
+        setTeams(data);
+      } else if (data.teams) {
+        setTeams(data.teams);
+      } else {
+        setTeams([]);
+      }
+
+      console.log("Teams:", data);
     } catch (err) {
       console.error("Error loading teams", err);
     }
@@ -82,6 +96,7 @@ const TEAM_CONFIG = {
     try {
       const res = await fetch(`${API}/team/${teamName}`);
       const data = await res.json();
+
       setSquad(data);
       setXi([]);
     } catch (err) {
@@ -107,18 +122,34 @@ const TEAM_CONFIG = {
       return;
     }
 
-    const res = await fetch(API + "/tournament-match", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ xi }),
-    });
+    setLoading(true);
 
-    const data = await res.json();
+    try {
+      const res = await fetch(API + "/tournament-match", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ xi })
+      });
 
-    localStorage.setItem("matchData", JSON.stringify(data));
-    window.location.href = "/match";
+      const data = await res.json();
+
+      if (data.error) {
+        alert("Error: " + data.error);
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem("matchData", JSON.stringify(data));
+      window.location.href = "/match";
+
+    } catch (err) {
+      console.error("Match error:", err);
+      alert("Failed to start match");
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -132,7 +163,7 @@ const TEAM_CONFIG = {
     >
       <h1>🏆 Tournament Mode</h1>
 
-      {/* ================= TEAM SELECTION ================= */}
+      {/* ================= TEAM CARDS ================= */}
       {!selectedTeam && (
         <>
           <h2>Select Your Team</h2>
@@ -140,25 +171,47 @@ const TEAM_CONFIG = {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-              gap: "15px",
+              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+              gap: "20px",
               marginTop: "20px",
             }}
           >
-            {teams.map((team, i) => (
-              <div
-                key={i}
-                className="card"
-                onClick={() => loadSquad(team)}
-                style={{
-                  cursor: "pointer",
-                  textAlign: "center",
-                  fontWeight: "bold",
-                }}
-              >
-                <h3>{team}</h3>
-              </div>
-            ))}
+            {teams.map((team, i) => {
+              const config = TEAM_CONFIG[team] || {};
+
+              return (
+                <div
+                  key={i}
+                  onClick={() => loadSquad(team)}
+                  style={{
+                    cursor: "pointer",
+                    borderRadius: "16px",
+                    padding: "20px",
+                    textAlign: "center",
+                    background: `linear-gradient(135deg, ${config.color || "#111"}, #000)`,
+                    transition: "0.3s",
+                    boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "scale(1.05)";
+                    e.currentTarget.style.boxShadow = `0 0 25px ${config.color}`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "scale(1)";
+                    e.currentTarget.style.boxShadow =
+                      "0 0 10px rgba(0,0,0,0.5)";
+                  }}
+                >
+                  <img
+                    src={config.logo}
+                    alt={team}
+                    style={{ width: "60px", marginBottom: "10px" }}
+                  />
+                  <h3>{config.short || team}</h3>
+                  <p style={{ fontSize: "12px", opacity: 0.7 }}>{team}</p>
+                </div>
+              );
+            })}
           </div>
         </>
       )}
@@ -204,9 +257,9 @@ const TEAM_CONFIG = {
           <button
             className="glow-btn"
             onClick={playMatch}
-            style={{ marginTop: "20px" }}
+            style={{ marginTop: "20px", opacity: loading ? 0.6 : 1 }}
           >
-            ▶ Play Match
+            {loading ? "Starting Match..." : "▶ Play Match"}
           </button>
         </>
       )}
