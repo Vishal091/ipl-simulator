@@ -37,7 +37,7 @@ export default function MatchSetup() {
   const proceed = async () => {
     if (xi.length !== 11) return alert("Select 11 players");
     if (!captain) return alert("Select captain");
-    if (!keeper) return alert("Select wicketkeeper");
+    if (!keeper) return alert("Select keeper");
 
     const teamsRes = await fetch(API + "/teams");
     const teams = await teamsRes.json();
@@ -61,41 +61,73 @@ export default function MatchSetup() {
   };
 
   return (
-    <div style={{ padding: 20, color: "white", background: "#0B0F1A" }}>
-      <h1>Select XI ({xi.length}/11)</h1>
+    <div style={{
+      padding: "20px",
+      color: "white",
+      background: "#0B0F1A",
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column"
+    }}>
+      
+      {/* SCROLLABLE CONTENT */}
+      <div style={{ flex: 1, overflowY: "auto", paddingBottom: "100px" }}>
+        
+        <h1>Select XI ({xi.length}/11)</h1>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
-        {squad.map((p, i) => (
-          <div
-            key={i}
-            onClick={() => toggle(p)}
-            style={{
-              padding: 10,
-              border: xi.find(x => x.name === p.name)
-                ? "2px solid cyan"
-                : "1px solid #333"
-            }}
-          >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
+          {squad.map((p, i) => (
+            <div
+              key={i}
+              onClick={() => toggle(p)}
+              style={{
+                padding: 10,
+                border: xi.find(x => x.name === p.name)
+                  ? "2px solid cyan"
+                  : "1px solid #333"
+              }}
+            >
+              {p.name}
+            </div>
+          ))}
+        </div>
+
+        <h3>Select Captain</h3>
+        {xi.map((p, i) => (
+          <button key={i} onClick={() => setCaptain(p.name)}>
             {p.name}
-          </div>
+          </button>
         ))}
+
+        <h3>Select Wicketkeeper</h3>
+        {xi.map((p, i) => (
+          <button key={i} onClick={() => setKeeper(p.name)}>
+            {p.name}
+          </button>
+        ))}
+
       </div>
 
-      <h3>Select Captain</h3>
-      {xi.map((p, i) => (
-        <button key={i} onClick={() => setCaptain(p.name)}>
-          {p.name}
+      {/* 🔥 STICKY BUTTON */}
+      <div style={{
+        position: "sticky",
+        bottom: 0,
+        background: "#0B0F1A",
+        padding: "15px",
+        borderTop: "1px solid #222"
+      }}>
+        <button
+          onClick={proceed}
+          style={{
+            width: "100%",
+            padding: "12px",
+            fontSize: "16px"
+          }}
+        >
+          Continue → Toss
         </button>
-      ))}
+      </div>
 
-      <h3>Select Wicketkeeper</h3>
-      {xi.map((p, i) => (
-        <button key={i} onClick={() => setKeeper(p.name)}>
-          {p.name}
-        </button>
-      ))}
-
-      <button onClick={proceed}>Continue</button>
     </div>
   );
 }
