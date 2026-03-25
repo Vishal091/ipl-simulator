@@ -17,56 +17,16 @@ const TEAM_NAME_MAP = {
 
 // ================= TEAM CONFIG =================
 const TEAM_CONFIG = {
-  "Chennai Super Kings": {
-    short: "CSK",
-    color: "#FDB913",
-    logo: "/teams/csk.png"
-  },
-  "Mumbai Indians": {
-    short: "MI",
-    color: "#004BA0",
-    logo: "/teams/mi.png"
-  },
-  "Royal Challengers Bengaluru": {
-    short: "RCB",
-    color: "#DA1818",
-    logo: "/teams/rcb.png"
-  },
-  "Kolkata Knight Riders": {
-    short: "KKR",
-    color: "#3A225D",
-    logo: "/teams/kkr.png"
-  },
-  "Delhi Capitals": {
-    short: "DC",
-    color: "#17479E",
-    logo: "/teams/dc.png"
-  },
-  "Punjab Kings": {
-    short: "PBKS",
-    color: "#ED1B24",
-    logo: "/teams/pbks.png"
-  },
-  "Rajasthan Royals": {
-    short: "RR",
-    color: "#EA1A85",
-    logo: "/teams/rr.png"
-  },
-  "Sunrisers Hyderabad": {
-    short: "SRH",
-    color: "#FF822A",
-    logo: "/teams/srh.png"
-  },
-  "Lucknow Super Giants": {
-    short: "LSG",
-    color: "#00AEEF",
-    logo: "/teams/lsg.png"
-  },
-  "Gujarat Titans": {
-    short: "GT",
-    color: "#1C1C1C",
-    logo: "/teams/gt.png"
-  }
+  "Chennai Super Kings": { short: "CSK", color: "#FDB913", logo: "/teams/csk.png" },
+  "Mumbai Indians": { short: "MI", color: "#004BA0", logo: "/teams/mi.png" },
+  "Royal Challengers Bengaluru": { short: "RCB", color: "#DA1818", logo: "/teams/rcb.png" },
+  "Kolkata Knight Riders": { short: "KKR", color: "#3A225D", logo: "/teams/kkr.png" },
+  "Delhi Capitals": { short: "DC", color: "#17479E", logo: "/teams/dc.png" },
+  "Punjab Kings": { short: "PBKS", color: "#ED1B24", logo: "/teams/pbks.png" },
+  "Rajasthan Royals": { short: "RR", color: "#EA1A85", logo: "/teams/rr.png" },
+  "Sunrisers Hyderabad": { short: "SRH", color: "#FF822A", logo: "/teams/srh.png" },
+  "Lucknow Super Giants": { short: "LSG", color: "#00AEEF", logo: "/teams/lsg.png" },
+  "Gujarat Titans": { short: "GT", color: "#1C1C1C", logo: "/teams/gt.png" }
 };
 
 export default function Tournament() {
@@ -88,15 +48,10 @@ export default function Tournament() {
       const res = await fetch(API + "/teams");
       const data = await res.json();
 
-      if (Array.isArray(data)) {
-        setTeams(data);
-      } else if (data.teams) {
-        setTeams(data.teams);
-      } else {
-        setTeams([]);
-      }
+      if (Array.isArray(data)) setTeams(data);
+      else if (data.teams) setTeams(data.teams);
+      else setTeams([]);
 
-      console.log("Teams:", data);
     } catch (err) {
       console.error("Error loading teams", err);
     }
@@ -128,6 +83,43 @@ export default function Tournament() {
     }
   };
 
+  // ================= AUTO XI =================
+  const autoSelectXI = () => {
+    let sorted = [...squad].sort((a, b) => b.agg - a.agg);
+
+    let selected = [];
+    let roles = { BAT: 0, BOWL: 0, AR: 0, WK: 0 };
+
+    for (let p of sorted) {
+      if (selected.length >= 11) break;
+
+      if (p.role === "WK" && roles.WK < 1) {
+        selected.push(p); roles.WK++;
+      } else if (p.role === "BAT" && roles.BAT < 4) {
+        selected.push(p); roles.BAT++;
+      } else if (p.role === "BOWL" && roles.BOWL < 4) {
+        selected.push(p); roles.BOWL++;
+      } else if (p.role === "AR" && roles.AR < 3) {
+        selected.push(p); roles.AR++;
+      }
+    }
+
+    // fill remaining
+    for (let p of sorted) {
+      if (selected.length >= 11) break;
+      if (!selected.find(x => x.name === p.name)) {
+        selected.push(p);
+      }
+    }
+
+    setXi(selected);
+  };
+
+  // ================= TEAM STRENGTH =================
+  const teamStrength = xi.length
+    ? Math.round(xi.reduce((sum, p) => sum + p.agg, 0) / xi.length)
+    : 0;
+
   // ================= PLAY MATCH =================
   const playMatch = async () => {
     if (xi.length !== 11) {
@@ -140,9 +132,7 @@ export default function Tournament() {
     try {
       const res = await fetch(API + "/tournament-match", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ xi })
       });
 
@@ -166,14 +156,12 @@ export default function Tournament() {
   };
 
   return (
-    <div
-      style={{
-        background: "#0B0F1A",
-        color: "white",
-        minHeight: "100vh",
-        padding: "20px",
-      }}
-    >
+    <div style={{
+      background: "#0B0F1A",
+      color: "white",
+      minHeight: "100vh",
+      padding: "20px"
+    }}>
       <h1>🏆 Tournament Mode</h1>
 
       {/* ================= TEAM CARDS ================= */}
@@ -181,14 +169,12 @@ export default function Tournament() {
         <>
           <h2>Select Your Team</h2>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-              gap: "20px",
-              marginTop: "20px",
-            }}
-          >
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+            gap: "20px",
+            marginTop: "20px"
+          }}>
             {teams.map((team, i) => {
               const fullName = TEAM_NAME_MAP[team] || team;
               const config = TEAM_CONFIG[fullName] || {};
@@ -204,7 +190,7 @@ export default function Tournament() {
                     textAlign: "center",
                     background: `linear-gradient(135deg, ${config.color || "#111"}, #000)`,
                     transition: "0.3s",
-                    boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+                    boxShadow: "0 0 10px rgba(0,0,0,0.5)"
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "scale(1.05)";
@@ -212,25 +198,17 @@ export default function Tournament() {
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "scale(1)";
-                    e.currentTarget.style.boxShadow =
-                      "0 0 10px rgba(0,0,0,0.5)";
+                    e.currentTarget.style.boxShadow = "0 0 10px rgba(0,0,0,0.5)";
                   }}
                 >
                   <img
                     src={config.logo}
                     alt={team}
-                    style={{
-                      width: "70px",
-                      height: "70px",
-                      objectFit: "contain",
-                      marginBottom: "10px"
-                    }}
+                    style={{ width: "70px", height: "70px", objectFit: "contain", marginBottom: "10px" }}
                   />
 
                   <h3>{team}</h3>
-                  <p style={{ fontSize: "12px", opacity: 0.7 }}>
-                    {fullName}
-                  </p>
+                  <p style={{ fontSize: "12px", opacity: 0.7 }}>{fullName}</p>
                 </div>
               );
             })}
@@ -245,14 +223,12 @@ export default function Tournament() {
             {TEAM_NAME_MAP[selectedTeam] || selectedTeam} Squad
           </h2>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-              gap: "12px",
-              marginTop: "15px",
-            }}
-          >
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+            gap: "12px",
+            marginTop: "15px"
+          }}>
             {squad.map((p, i) => (
               <div
                 key={i}
@@ -269,7 +245,6 @@ export default function Tournament() {
                   position: "relative"
                 }}
               >
-                {/* RATING */}
                 <div style={{
                   position: "absolute",
                   top: "8px",
@@ -281,10 +256,8 @@ export default function Tournament() {
                   {p.agg}
                 </div>
 
-                {/* NAME */}
                 <h4 style={{ marginTop: "20px" }}>{p.name}</h4>
 
-                {/* ROLE */}
                 <div style={{
                   display: "inline-block",
                   padding: "2px 8px",
@@ -296,7 +269,6 @@ export default function Tournament() {
                   {p.role}
                 </div>
 
-                {/* STATS */}
                 <div style={{
                   marginTop: "10px",
                   fontSize: "12px",
@@ -309,10 +281,34 @@ export default function Tournament() {
             ))}
           </div>
 
+          {/* XI + AUTO */}
           <h3 style={{ marginTop: "20px" }}>
             Playing XI: {xi.length}/11
           </h3>
 
+          <button className="glow-btn" onClick={autoSelectXI} style={{ marginTop: "10px" }}>
+            ⚡ Auto Select Best XI
+          </button>
+
+          {/* TEAM STRENGTH */}
+          <div style={{ marginTop: "15px" }}>
+            <p>Team Strength: {teamStrength}</p>
+
+            <div style={{
+              height: "10px",
+              background: "#222",
+              borderRadius: "5px",
+              overflow: "hidden"
+            }}>
+              <div style={{
+                width: `${teamStrength}%`,
+                height: "100%",
+                background: "#00E5FF"
+              }} />
+            </div>
+          </div>
+
+          {/* PLAY */}
           <button
             className="glow-btn"
             onClick={playMatch}
