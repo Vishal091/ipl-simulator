@@ -5,49 +5,96 @@ export default function Dashboard() {
   const API = "https://ipl-simulator-tb8n.onrender.com";
 
   const [team, setTeam] = useState("");
+  const [points, setPoints] = useState({});
   const [schedule, setSchedule] = useState([]);
-  const [points, setPoints] = useState([]);
-  const [orangeCap, setOrangeCap] = useState(null);
-  const [purpleCap, setPurpleCap] = useState(null);
+  const [results, setResults] = useState([]);
 
+  // ================= INIT + LOAD =================
   useEffect(() => {
-    const selected = localStorage.getItem("selectedTeam");
-    setTeam(selected);
+    const init = async () => {
+      try {
+        // init tournament only once
+        if (!localStorage.getItem("tournamentInitialized")) {
+          await fetch(API + "/init-tournament", { method: "POST" });
+          localStorage.setItem("tournamentInitialized", "true");
+        }
 
-    generateMockData(); // temp (we upgrade backend later)
+        const selected = localStorage.getItem("selectedTeam");
+        setTeam(selected);
+
+        loadStatus();
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    init();
   }, []);
 
-  // ================= MOCK DATA (TEMP) =================
-  const generateMockData = () => {
-    const teams = ["CSK","MI","RCB","KKR","DC","PBKS","RR","SRH","LSG","GT"];
+  // ================= LOAD STATUS =================
+  const loadStatus = async () => {
+    try {
+      const res = await fetch(API + "/tournament-status");
+      const data = await res.json();
 
-    // schedule
-    let sched = [];
-    for (let i = 0; i < teams.length; i++) {
-      for (let j = i + 1; j < teams.length; j++) {
-        sched.push({
-          team1: teams[i],
-          team2: teams[j],
-          played: false
-        });
-      }
+      setPoints(data.points || {});
+      setSchedule(data.schedule || []);
+      setResults(data.results || []);
+
+    } catch (err) {
+      console.error("Status load error", err);
     }
-
-    // points
-    let pts = teams.map(t => ({
-      team: t,
-      played: 0,
-      wins: 0,
-      points: 0
-    }));
-
-    // caps
-    setOrangeCap({ name: "Virat Kohli", runs: 450 });
-    setPurpleCap({ name: "Bumrah", wickets: 18 });
-
-    setSchedule(sched.slice(0, 10)); // show first 10 matches
-    setPoints(pts);
   };
+
+  // ================= PLAY MATCH =================
+  const playMatch = async () => {
+    try {
+      const squadRes = await fetch(`${API}/team/${team}`);
+      const squad = await squadRes.json();
+
+      const xi = squad.sort((a, b) => b.agg - a.agg).slice(0, 11);
+
+      const res = await fetch(API + "/tournament-match", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          team: team,
+          xi: xi
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+
+      localStorage.setItem("matchData", JSON.stringify(data.match));
+
+      // reload updated table
+      await loadStatus();
+
+      // redirect
+      window.location.href = "/match";
+
+    } catch (err) {
+      console.error(err);
+      alert("Match failed");
+    }
+  };
+
+  // ================= SORT POINTS =================
+  const sortedPoints = Object.entries(points)
+    .map(([team, stats]) => ({ team, ...stats }))
+    .sort((a, b) => b.points - a.points);
+
+  // ================= USER MATCHES =================
+  const userMatches = schedule.filter(
+    m => m.team1 === team || m.team2 === team
+  );
 
   return (
     <div style={{
@@ -59,37 +106,25 @@ export default function Dashboard() {
       <h1>🏆 Tournament Dashboard</h1>
       <h2>Your Team: {team}</h2>
 
-      {/* ================= CAPS ================= */}
-      <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
-
-        <div style={{
-          padding: "15px",
-          background: "#222",
-          borderRadius: "10px"
-        }}>
-          <h3>🟠 Orange Cap</h3>
-          <p>{orangeCap?.name}</p>
-          <p>{orangeCap?.runs} runs</p>
-        </div>
-
-        <div style={{
-          padding: "15px",
-          background: "#222",
-          borderRadius: "10px"
-        }}>
-          <h3>🟣 Purple Cap</h3>
-          <p>{purpleCap?.name}</p>
-          <p>{purpleCap?.wickets} wickets</p>
-        </div>
-
-      </div>
+      {/* ================= PLAY NEXT MATCH ================= */}
+      <button
+        onClick={playMatch}
+        className="glow-btn"
+        style={{ marginTop: "20px" }}
+      >
+        ▶ Play Next Match
+      </button>
 
       {/* ================= POINTS TABLE ================= */}
       <h2 style={{ marginTop: "30px" }}>Points Table</h2>
 
-      <table style={{ width: "100%", marginTop: "10px" }}>
+      <table style={{
+        width: "100%",
+        marginTop: "10px",
+        borderCollapse: "collapse"
+      }}>
         <thead>
-          <tr>
+          <tr style={{ background: "#111" }}>
             <th>Team</th>
             <th>P</th>
             <th>W</th>
@@ -98,8 +133,11 @@ export default function Dashboard() {
         </thead>
 
         <tbody>
-          {points.map((t, i) => (
-            <tr key={i}>
+          {sortedPoints.map((t, i) => (
+            <tr key={i} style={{
+              textAlign: "center",
+              borderBottom: "1px solid #222"
+            }}>
               <td>{t.team}</td>
               <td>{t.played}</td>
               <td>{t.wins}</td>
@@ -109,69 +147,42 @@ export default function Dashboard() {
         </tbody>
       </table>
 
-      {/* ================= SCHEDULE ================= */}
-      <h2 style={{ marginTop: "30px" }}>Schedule</h2>
+      {/* ================= YOUR MATCHES ================= */}
+      <h2 style={{ marginTop: "30px" }}>Your Matches</h2>
 
-      {schedule.map((m, i) => (
+      {userMatches.map((m, i) => (
         <div key={i} style={{
           padding: "10px",
           marginTop: "8px",
-          background: "#111",
+          background: m.played ? "#1a1a1a" : "#111",
           borderRadius: "8px",
           display: "flex",
           justifyContent: "space-between"
         }}>
           <span>{m.team1} vs {m.team2}</span>
 
-          <button
-            onClick={async () => {
-  try {
-    const team = localStorage.getItem("selectedTeam");
+          <span style={{
+            color: m.played ? "#00E676" : "#FF5252"
+          }}>
+            {m.played ? "Played" : "Upcoming"}
+          </span>
+        </div>
+      ))}
 
-    if (!team) {
-      alert("No team selected");
-      return;
-    }
+      {/* ================= RECENT RESULTS ================= */}
+      <h2 style={{ marginTop: "30px" }}>Recent Results</h2>
 
-    // 🔥 get your squad first
-    const squadRes = await fetch(`${API}/team/${team}`);
-    const squad = await squadRes.json();
-
-    // pick best XI (simple auto for now)
-    const xi = squad.sort((a, b) => b.agg - a.agg).slice(0, 11);
-
-    const res = await fetch(API + "/tournament-match", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        team: team,
-        xi: xi
-      })
-    });
-
-    const data = await res.json();
-
-    if (data.error) {
-      alert(data.error);
-      return;
-    }
-
-    // store match
-    localStorage.setItem("matchData", JSON.stringify(data.match));
-
-    // redirect
-    window.location.href = "/match";
-
-  } catch (err) {
-    console.error(err);
-    alert("Match failed");
-  }
-}}
-          >
-            ▶ Play
-          </button>
+      {results.slice(-5).map((r, i) => (
+        <div key={i} style={{
+          padding: "10px",
+          marginTop: "8px",
+          background: "#111",
+          borderRadius: "8px"
+        }}>
+          <div>{r.team1} vs {r.team2}</div>
+          <div style={{ fontSize: "12px", opacity: 0.7 }}>
+            {r.winner ? `Winner: ${r.winner}` : "Match Played"}
+          </div>
         </div>
       ))}
     </div>
