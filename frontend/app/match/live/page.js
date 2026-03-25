@@ -13,7 +13,7 @@ export default function LiveMatch() {
   const [nextIndex, setNextIndex] = useState(2);
 
   const [bowler, setBowler] = useState(null);
-  const [bowlerOvers, setBowlerOvers] = useState({});
+  const [bowlerBalls, setBowlerBalls] = useState({});
 
   const [log, setLog] = useState([]);
   const [scorecard, setScorecard] = useState({});
@@ -45,7 +45,13 @@ export default function LiveMatch() {
 
   // ================= SELECT BOWLER =================
   const selectBowler = (p) => {
-    if (bowlerOvers[p.name] >= 24) {
+    // allow only bowlers / allrounders
+    if (!["BOWL", "AR"].includes(p.role)) {
+      alert("Only bowlers/allrounders can bowl");
+      return;
+    }
+
+    if ((bowlerBalls[p.name] || 0) >= 24) {
       alert("Max 4 overs reached");
       return;
     }
@@ -86,10 +92,11 @@ export default function LiveMatch() {
 
       setLog(prev => [...prev, `${striker.name} ${res}`]);
 
+      // 🔥 FIXED STRIKE ROTATION
       if (res % 2 === 1) {
-        [striker, nonStriker] = [nonStriker, striker];
-        setStriker(striker);
-        setNonStriker(nonStriker);
+        const temp = striker;
+        setStriker(nonStriker);
+        setNonStriker(temp);
       }
     }
 
@@ -100,21 +107,25 @@ export default function LiveMatch() {
     const newBalls = balls + 1;
     setBalls(newBalls);
 
-    // update bowler overs (1 ball = 1)
-    let bo = { ...bowlerOvers };
-    bo[bowler.name] = (bo[bowler.name] || 0) + 1;
-    setBowlerOvers(bo);
+    // update bowler balls
+    let bb = { ...bowlerBalls };
+    bb[bowler.name] = (bb[bowler.name] || 0) + 1;
+    setBowlerBalls(bb);
 
-    // OVER COMPLETE
+    // ================= OVER COMPLETE =================
     if (newBalls % 6 === 0) {
-      [striker, nonStriker] = [nonStriker, striker];
-      setStriker(striker);
-      setNonStriker(nonStriker);
+      // strike swap
+      const temp = striker;
+      setStriker(nonStriker);
+      setNonStriker(temp);
 
       setSelectBowlerMode(true);
       setBowler(null);
     }
   };
+
+  // ================= HELPERS =================
+  const overs = `${Math.floor(balls / 6)}.${balls % 6}`;
 
   // ================= UI =================
   return (
@@ -128,23 +139,37 @@ export default function LiveMatch() {
 
       {/* SCORE */}
       <h2>{score}/{wickets}</h2>
-      <p>Overs: {Math.floor(balls/6)}.{balls%6}</p>
+      <p>Overs: {overs}</p>
 
-      {/* STRIKERS */}
-      <p>Striker: {striker?.name}</p>
-      <p>Non-Striker: {nonStriker?.name}</p>
-
-      {/* BOWLER */}
-      <p>Bowler: {bowler?.name || "None"}</p>
+      {/* CURRENT PLAYERS */}
+      <div style={{ marginTop: "10px" }}>
+        <p>Striker: <b>{striker?.name}</b></p>
+        <p>Non-Striker: {nonStriker?.name}</p>
+        <p>Bowler: {bowler?.name || "None"}</p>
+      </div>
 
       {/* SELECT BOWLER */}
       {selectBowlerMode && (
         <>
-          <h3>Select Bowler</h3>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+          <h3 style={{ marginTop: "20px" }}>Select Bowler</h3>
+
+          <div style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "10px"
+          }}>
             {xi.map((p, i) => (
-              <button key={i} onClick={() => selectBowler(p)}>
-                {p.name} ({Math.floor((bowlerOvers[p.name] || 0)/6)} ov)
+              <button
+                key={i}
+                onClick={() => selectBowler(p)}
+                style={{
+                  padding: "6px 10px",
+                  background: "#111",
+                  border: "1px solid #333",
+                  cursor: "pointer"
+                }}
+              >
+                {p.name} ({Math.floor((bowlerBalls[p.name] || 0)/6)} ov)
               </button>
             ))}
           </div>
@@ -153,16 +178,31 @@ export default function LiveMatch() {
 
       {/* PLAY BALL */}
       {!selectBowlerMode && (
-        <button onClick={playBall} style={{ marginTop: "20px" }}>
+        <button
+          onClick={playBall}
+          style={{
+            marginTop: "20px",
+            padding: "10px 20px",
+            fontSize: "16px"
+          }}
+        >
           ▶ Next Ball
         </button>
       )}
 
       {/* BALL LOG */}
-      <div style={{ marginTop: "20px" }}>
+      <div style={{ marginTop: "25px" }}>
         <h3>Last Balls</h3>
+
         {log.slice(-12).map((l, i) => (
-          <span key={i} style={{ marginRight: "8px" }}>{l}</span>
+          <span key={i} style={{
+            marginRight: "8px",
+            padding: "4px 6px",
+            background: "#111",
+            borderRadius: "4px"
+          }}>
+            {l}
+          </span>
         ))}
       </div>
 
@@ -170,23 +210,35 @@ export default function LiveMatch() {
       <div style={{ marginTop: "30px" }}>
         <h3>Scorecard</h3>
 
-        <table style={{ width: "100%", marginTop: "10px" }}>
+        <table style={{
+          width: "100%",
+          marginTop: "10px",
+          borderCollapse: "collapse"
+        }}>
           <thead>
-            <tr>
+            <tr style={{ background: "#111" }}>
               <th>Player</th>
               <th>Runs</th>
               <th>Balls</th>
+              <th>SR</th>
             </tr>
           </thead>
 
           <tbody>
-            {Object.entries(scorecard).map(([name, stats], i) => (
-              <tr key={i}>
-                <td>{name}</td>
-                <td>{stats.runs}</td>
-                <td>{stats.balls}</td>
-              </tr>
-            ))}
+            {Object.entries(scorecard).map(([name, stats], i) => {
+              const sr = stats.balls
+                ? ((stats.runs / stats.balls) * 100).toFixed(1)
+                : 0;
+
+              return (
+                <tr key={i} style={{ textAlign: "center" }}>
+                  <td>{name}</td>
+                  <td>{stats.runs}</td>
+                  <td>{stats.balls}</td>
+                  <td>{sr}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
