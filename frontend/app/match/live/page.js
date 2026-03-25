@@ -5,7 +5,6 @@ export default function LiveMatch() {
 
   const [battingTeam, setBattingTeam] = useState([]);
   const [bowlingTeam, setBowlingTeam] = useState([]);
-
   const [keeper, setKeeper] = useState(null);
 
   const [innings, setInnings] = useState(1);
@@ -32,14 +31,18 @@ export default function LiveMatch() {
   const [shotStriker, setShotStriker] = useState("normal");
   const [shotNonStriker, setShotNonStriker] = useState("normal");
 
-  const [log, setLog] = useState([]);
   const [scorecard, setScorecard] = useState({});
+  const [log, setLog] = useState([]);
+
+  const [freeHit, setFreeHit] = useState(false);
 
   // ================= INIT =================
   useEffect(() => {
     const match = JSON.parse(localStorage.getItem("matchData"));
     const tossWinner = localStorage.getItem("tossWinner");
     const decision = localStorage.getItem("tossDecision");
+
+    if (!match) return;
 
     const { myXI, oppXI, keeper } = match;
     setKeeper(keeper);
@@ -71,11 +74,8 @@ export default function LiveMatch() {
     setWickets(0);
     setBalls(0);
 
-    if (team.length >= 2) {
-      setStriker(team[0]);
-      setNonStriker(team[1]);
-    }
-
+    setStriker(team[0] || null);
+    setNonStriker(team[1] || null);
     setAvailableBatters(team.slice(2));
 
     setBowler(null);
@@ -90,55 +90,25 @@ export default function LiveMatch() {
     setScorecard(sc);
   };
 
-  // ================= SAVE SYSTEM =================
-  const saveMatchData = () => {
-    let table = JSON.parse(localStorage.getItem("pointsTable")) || {};
+  // ================= SELECT BOWLER =================
+  const selectBowler = (p) => {
+    if (p.name === keeper) return alert("Keeper cannot bowl");
+    if (p.name === lastBowler) return alert("No consecutive overs");
+    if ((bowlerBalls[p.name] || 0) >= 24) return alert("Max 4 overs");
 
-    const match = JSON.parse(localStorage.getItem("matchData"));
-    const myTeam = match.myTeam;
-    const oppTeam = match.oppTeam;
-
-    if (!table[myTeam]) table[myTeam] = { played: 0, won: 0, lost: 0, points: 0 };
-    if (!table[oppTeam]) table[oppTeam] = { played: 0, won: 0, lost: 0, points: 0 };
-
-    table[myTeam].played++;
-    table[oppTeam].played++;
-
-    if (result.includes("Win")) {
-      table[myTeam].won++;
-      table[myTeam].points += 2;
-      table[oppTeam].lost++;
-    } else if (result.includes("Lost")) {
-      table[oppTeam].won++;
-      table[oppTeam].points += 2;
-      table[myTeam].lost++;
-    }
-
-    localStorage.setItem("pointsTable", JSON.stringify(table));
+    setBowler(p);
+    setSelectBowlerMode(false);
   };
 
-  const savePlayerStats = () => {
-    let stats = JSON.parse(localStorage.getItem("playerStats")) || {};
-
-    Object.entries(scorecard).forEach(([name, s]) => {
-      if (!stats[name]) stats[name] = { runs: 0, wickets: 0 };
-      stats[name].runs += s.runs;
-    });
-
-    Object.keys(bowlerBalls).forEach(name => {
-      if (!stats[name]) stats[name] = { runs: 0, wickets: 0 };
-      stats[name].wickets += Math.floor(Math.random() * 3);
-    });
-
-    localStorage.setItem("playerStats", JSON.stringify(stats));
+  // ================= AI BOWLER =================
+  const getAIBowler = () => {
+    const eligible = bowlingTeam.filter(p =>
+      p.name !== keeper &&
+      p.name !== lastBowler &&
+      (bowlerBalls[p.name] || 0) < 24
+    );
+    return eligible[Math.floor(Math.random() * eligible.length)];
   };
-
-  useEffect(() => {
-    if (result) {
-      saveMatchData();
-      savePlayerStats();
-    }
-  }, [result]);
 
   // ================= PLAY BALL =================
   const playBall = () => {
@@ -152,33 +122,47 @@ export default function LiveMatch() {
     let currentBowler = bowler;
 
     if (userBatting && !bowler) {
-      const eligible = bowlingTeam.filter(p =>
-        p.name !== keeper &&
-        p.name !== lastBowler &&
-        (bowlerBalls[p.name] || 0) < 24
-      );
-
-      currentBowler = eligible[Math.floor(Math.random() * eligible.length)];
-      setBowler(currentBowler);
+      const ai = getAIBowler();
+      setBowler(ai);
+      currentBowler = ai;
     }
 
     const rand = Math.random();
 
-    // 🔥 EXTRAS
+    // WIDE
     if (rand < 0.05) {
-      setScore(prev => prev + 1);
-      setLog(prev => [...prev, "Wide"]);
+      setScore(s => s + 1);
+      setLog(l => [...l, "Wide"]);
       return;
     }
 
+    // NO BALL
     if (rand < 0.10) {
-      setScore(prev => prev + 1);
-      setLog(prev => [...prev, "No Ball"]);
+      setScore(s => s + 1);
+      setFreeHit(true);
+      setLog(l => [...l, "No Ball"]);
       return;
     }
 
-    const outcomes = [0,1,2,4,6,"W"];
-    const res = outcomes[Math.floor(Math.random()*outcomes.length)];
+    const batSkill = striker?.bat || 50;
+    const bowlSkill = currentBowler?.bowl || 50;
+
+    let aggression =
+      shotStriker === "aggressive" ? 1.3 :
+      shotStriker === "defensive" ? 0.7 : 1;
+
+    let wicketChance = (bowlSkill - batSkill) / 200 + 0.05;
+    wicketChance *= aggression;
+
+    let res;
+    const r = Math.random();
+
+    if (!freeHit && r < wicketChance) res = "W";
+    else if (r < 0.3) res = 0;
+    else if (r < 0.5) res = 1;
+    else if (r < 0.65) res = 2;
+    else if (r < 0.85) res = 4;
+    else res = 6;
 
     let sc = { ...scorecard };
 
@@ -190,8 +174,7 @@ export default function LiveMatch() {
 
       if (newW >= 10) {
         setScorecard(sc);
-        endInnings();
-        return;
+        return endInnings();
       }
 
       if (userBatting) {
@@ -204,10 +187,8 @@ export default function LiveMatch() {
         }
       }
 
-      setLog(prev => [...prev, `${striker?.name} OUT`]);
-
     } else {
-      setScore(prev => prev + res);
+      setScore(s => s + res);
 
       if (striker) {
         sc[striker.name].runs += res;
@@ -218,24 +199,16 @@ export default function LiveMatch() {
         setStriker(nonStriker);
         setNonStriker(striker);
       }
-
-      setLog(prev => [...prev, res]);
     }
 
     setScorecard(sc);
+    setFreeHit(false);
 
     const newBalls = balls + 1;
     setBalls(newBalls);
 
-    if (newBalls >= 120) {
-      endInnings();
-      return;
-    }
-
-    if (innings === 2 && score >= target) {
-      endInnings();
-      return;
-    }
+    if (newBalls >= 120) return endInnings();
+    if (innings === 2 && score >= target) return endInnings();
 
     let bb = { ...bowlerBalls };
     bb[currentBowler.name] = (bb[currentBowler.name] || 0) + 1;
@@ -269,12 +242,12 @@ export default function LiveMatch() {
   };
 
   return (
-    <div style={{ padding:20, color:"white", background:"#0B0F1A" }}>
+    <div style={{ padding: 20, color: "white", background: "#0B0F1A" }}>
       <h2>{score}/{wickets}</h2>
       <p>Overs: {Math.floor(balls/6)}.{balls%6}</p>
 
-      <h3>Striker: {striker?.name}</h3>
-      <h3>Non-Striker: {nonStriker?.name}</h3>
+      <h3>Striker: {striker?.name || "-"}</h3>
+      <h3>Non-Striker: {nonStriker?.name || "-"}</h3>
 
       {!userBatting && selectBowlerMode && (
         <>
@@ -290,9 +263,9 @@ export default function LiveMatch() {
       <h3>Scorecard</h3>
       <table>
         <tbody>
-          {Object.entries(scorecard).map(([name,s],i)=>(
+          {Object.entries(scorecard).map(([n,s],i)=>(
             <tr key={i}>
-              <td>{name}</td>
+              <td>{n}</td>
               <td>{s.runs}</td>
               <td>{s.balls}</td>
             </tr>
@@ -300,9 +273,7 @@ export default function LiveMatch() {
         </tbody>
       </table>
 
-      {!result && (
-        <button onClick={playBall}>Next Ball</button>
-      )}
+      {!result && <button onClick={playBall}>Next Ball</button>}
 
       {result && (
         <>
