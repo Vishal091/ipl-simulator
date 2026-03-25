@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 export default function LiveMatch() {
   const [battingTeam, setBattingTeam] = useState([]);
   const [bowlingTeam, setBowlingTeam] = useState([]);
-
   const [userBatting, setUserBatting] = useState(false);
+
+  const [innings, setInnings] = useState(1);
+  const [target, setTarget] = useState(null);
 
   const [score, setScore] = useState(0);
   const [wickets, setWickets] = useState(0);
@@ -13,7 +15,6 @@ export default function LiveMatch() {
 
   const [striker, setStriker] = useState(null);
   const [nonStriker, setNonStriker] = useState(null);
-
   const [availableBatters, setAvailableBatters] = useState([]);
 
   const [bowler, setBowler] = useState(null);
@@ -22,6 +23,8 @@ export default function LiveMatch() {
   const [log, setLog] = useState([]);
   const [selectBowlerMode, setSelectBowlerMode] = useState(true);
   const [selectBatterMode, setSelectBatterMode] = useState(false);
+
+  const [result, setResult] = useState(null);
 
   // ================= INIT =================
   useEffect(() => {
@@ -50,11 +53,29 @@ export default function LiveMatch() {
     setBowlingTeam(bowl);
     setUserBatting(isUserBatting);
 
-    setStriker(bat[0]);
-    setNonStriker(bat[1]);
-
-    setAvailableBatters(bat.slice(2));
+    initInnings(bat);
   }, []);
+
+  const initInnings = (team) => {
+    setScore(0);
+    setWickets(0);
+    setBalls(0);
+
+    setStriker(team[0]);
+    setNonStriker(team[1]);
+    setAvailableBatters(team.slice(2));
+
+    setBowler(null);
+    setSelectBowlerMode(true);
+    setSelectBatterMode(false);
+  };
+
+  // ================= SELECT BATTER =================
+  const selectNextBatter = (p) => {
+    setStriker(p);
+    setAvailableBatters(availableBatters.filter(b => b.name !== p.name));
+    setSelectBatterMode(false);
+  };
 
   // ================= SELECT BOWLER =================
   const selectBowler = (p) => {
@@ -72,11 +93,30 @@ export default function LiveMatch() {
     setSelectBowlerMode(false);
   };
 
-  // ================= SELECT NEXT BATTER =================
-  const selectNextBatter = (p) => {
-    setStriker(p);
-    setAvailableBatters(availableBatters.filter(b => b.name !== p.name));
-    setSelectBatterMode(false);
+  // ================= END INNINGS =================
+  const endInnings = () => {
+    if (innings === 1) {
+      setTarget(score + 1);
+      setInnings(2);
+
+      // swap roles
+      const newBat = bowlingTeam;
+      const newBowl = battingTeam;
+
+      setBattingTeam(newBat);
+      setBowlingTeam(newBowl);
+
+      setUserBatting(!userBatting);
+
+      initInnings(newBat);
+    } else {
+      // RESULT
+      if (score >= target) {
+        setResult("Chased successfully 🎯");
+      } else {
+        setResult("Failed to chase ❌");
+      }
+    }
   };
 
   // ================= PLAY BALL =================
@@ -91,19 +131,17 @@ export default function LiveMatch() {
 
     if (res === "W") {
       setWickets(wickets + 1);
-      setLog(prev => [...prev, `${striker.name} OUT`]);
 
-      if (userBatting) {
-        setSelectBatterMode(true);
-      } else {
-        if (availableBatters.length > 0) {
+      if (availableBatters.length > 0) {
+        if (userBatting) {
+          setSelectBatterMode(true);
+        } else {
           setStriker(availableBatters[0]);
           setAvailableBatters(availableBatters.slice(1));
         }
       }
     } else {
       setScore(score + res);
-      setLog(prev => [...prev, `${striker.name} ${res}`]);
 
       if (res % 2 === 1) {
         const temp = striker;
@@ -112,17 +150,23 @@ export default function LiveMatch() {
       }
     }
 
-    setBalls(balls + 1);
+    const newBalls = balls + 1;
+    setBalls(newBalls);
 
-    // bowler tracking
-    if (!userBatting) {
-      let bb = { ...bowlerBalls };
-      bb[bowler.name] = (bb[bowler.name] || 0) + 1;
-      setBowlerBalls(bb);
+    // chase end
+    if (innings === 2 && score >= target) {
+      endInnings();
+      return;
     }
 
-    // over complete
-    if ((balls + 1) % 6 === 0) {
+    // all out or 20 overs
+    if (newBalls >= 120 || wickets >= 10) {
+      endInnings();
+      return;
+    }
+
+    // over end
+    if (newBalls % 6 === 0) {
       const temp = striker;
       setStriker(nonStriker);
       setNonStriker(temp);
@@ -134,54 +178,60 @@ export default function LiveMatch() {
     }
   };
 
-  // ================= UI =================
   return (
     <div style={{ padding: 20, color: "white", background: "#0B0F1A" }}>
-      <h1>🏏 Live Match</h1>
+      <h1>🏏 Match</h1>
+
+      <h2>Innings {innings}</h2>
+
+      {target && <p>Target: {target}</p>}
 
       <h2>{score}/{wickets}</h2>
-      <p>Overs: {Math.floor(balls/6)}.{balls%6}</p>
+      <p>{Math.floor(balls/6)}.{balls%6}</p>
 
-      <p>Striker: {striker?.name}</p>
-      <p>Non-Striker: {nonStriker?.name}</p>
-
-      {/* ================= BOWLING MODE ================= */}
-      {!userBatting && selectBowlerMode && (
+      {result && (
         <>
-          <h3>Select Bowler</h3>
-          {bowlingTeam.map((p, i) => (
-            <button key={i} onClick={() => selectBowler(p)}>
-              {p.name}
-            </button>
-          ))}
+          <h2>{result}</h2>
+          <button onClick={() => window.location.href="/tournament"}>
+            Back to Tournament
+          </button>
         </>
       )}
 
-      {/* ================= BATTER SELECTION ================= */}
-      {selectBatterMode && (
+      {!result && (
         <>
-          <h3>Select Next Batter</h3>
-          {availableBatters.map((p, i) => (
-            <button key={i} onClick={() => selectNextBatter(p)}>
-              {p.name}
-            </button>
-          ))}
+          <p>Striker: {striker?.name}</p>
+
+          {/* Bowler */}
+          {!userBatting && selectBowlerMode && (
+            <>
+              <h3>Select Bowler</h3>
+              {bowlingTeam.map((p, i) => (
+                <button key={i} onClick={() => selectBowler(p)}>
+                  {p.name}
+                </button>
+              ))}
+            </>
+          )}
+
+          {/* Batter */}
+          {selectBatterMode && (
+            <>
+              <h3>Select Batter</h3>
+              {availableBatters.map((p, i) => (
+                <button key={i} onClick={() => selectNextBatter(p)}>
+                  {p.name}
+                </button>
+              ))}
+            </>
+          )}
+
+          {/* Play */}
+          {(!selectBowlerMode || userBatting) && !selectBatterMode && (
+            <button onClick={playBall}>Next Ball</button>
+          )}
         </>
       )}
-
-      {/* ================= PLAY BALL ================= */}
-      {(!selectBowlerMode || userBatting) && !selectBatterMode && (
-        <button onClick={playBall} style={{ marginTop: 20 }}>
-          ▶ Next Ball
-        </button>
-      )}
-
-      {/* ================= LOG ================= */}
-      <div style={{ marginTop: 20 }}>
-        {log.slice(-10).map((l, i) => (
-          <span key={i} style={{ marginRight: 8 }}>{l}</span>
-        ))}
-      </div>
     </div>
   );
 }
