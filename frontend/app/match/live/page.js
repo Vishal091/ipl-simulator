@@ -88,7 +88,14 @@ export default function LiveMatch() {
     const res = outcomes[Math.floor(Math.random()*outcomes.length)];
 
     if (res === "W") {
-      setWickets(wickets + 1);
+      const newWickets = wickets + 1;
+      setWickets(newWickets);
+
+      // 🛑 ALL OUT FIX
+      if (newWickets >= 10) {
+        alert("All Out!");
+        return;
+      }
 
       if (userBatting) {
         setSelectBatterMode(true);
@@ -111,12 +118,10 @@ export default function LiveMatch() {
     const newBalls = balls + 1;
     setBalls(newBalls);
 
-    // track bowler balls
     let bb = { ...bowlerBalls };
     bb[bowler.name] = (bb[bowler.name] || 0) + 1;
     setBowlerBalls(bb);
 
-    // end of over
     if (newBalls % 6 === 0) {
       setLastBowler(bowler?.name);
       setBowler(null);
@@ -129,13 +134,12 @@ export default function LiveMatch() {
   };
 
   return (
-    <div style={{ padding: 20, color: "white", background: "#0B0F1A" }}>
+    <div style={{ padding: 20, color: "white", background: "#0B0F1A", minHeight: "100vh" }}>
       <h2>{score}/{wickets}</h2>
       <p>{Math.floor(balls/6)}.{balls%6}</p>
 
       <p>Bowler: {bowler ? bowler.name : "Select bowler"}</p>
 
-      {/* Bowler selection */}
       {!userBatting && selectBowlerMode && (
         <>
           <h3>Select Bowler</h3>
@@ -147,7 +151,6 @@ export default function LiveMatch() {
         </>
       )}
 
-      {/* Batter selection */}
       {selectBatterMode && (
         <>
           <h3>Select Batter</h3>
@@ -159,7 +162,6 @@ export default function LiveMatch() {
         </>
       )}
 
-      {/* Play */}
       {(!selectBowlerMode || userBatting) && !selectBatterMode && (
         <button onClick={playBall}>Next Ball</button>
       )}
