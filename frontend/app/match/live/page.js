@@ -74,9 +74,6 @@ export default function LiveMatch() {
     if (team.length >= 2) {
       setStriker(team[0]);
       setNonStriker(team[1]);
-    } else {
-      setStriker(team[0] || null);
-      setNonStriker(null);
     }
 
     setAvailableBatters(team.slice(2));
@@ -93,53 +90,60 @@ export default function LiveMatch() {
     setScorecard(sc);
   };
 
-  // ================= AI BOWLER =================
-  const getAIBowler = () => {
-    const eligible = bowlingTeam.filter(p =>
-      p.name !== keeper &&
-      p.name !== lastBowler &&
-      (bowlerBalls[p.name] || 0) < 24
-    );
+  // ================= SAVE SYSTEM =================
+  const saveMatchData = () => {
+    let table = JSON.parse(localStorage.getItem("pointsTable")) || {};
 
-    return eligible[Math.floor(Math.random() * eligible.length)];
-  };
+    const match = JSON.parse(localStorage.getItem("matchData"));
+    const myTeam = match.myTeam;
+    const oppTeam = match.oppTeam;
 
-  // ================= SELECT BOWLER =================
-  const selectBowler = (p) => {
-    if (p.name === keeper) return alert("Keeper cannot bowl");
-    if (p.name === lastBowler) return alert("No consecutive overs");
-    if ((bowlerBalls[p.name] || 0) >= 24) return alert("Max 4 overs");
+    if (!table[myTeam]) table[myTeam] = { played: 0, won: 0, lost: 0, points: 0 };
+    if (!table[oppTeam]) table[oppTeam] = { played: 0, won: 0, lost: 0, points: 0 };
 
-    setBowler(p);
-    setSelectBowlerMode(false);
-  };
+    table[myTeam].played++;
+    table[oppTeam].played++;
 
-  // ================= END INNINGS =================
-  const endInnings = () => {
-    if (innings === 1) {
-      setTarget(score + 1);
-      setInnings(2);
-
-      const newBat = bowlingTeam;
-      const newBowl = battingTeam;
-
-      setBattingTeam(newBat);
-      setBowlingTeam(newBowl);
-      setUserBatting(!userBatting);
-
-      initInnings(newBat);
-    } else {
-      if (score > target - 1) setResult("🏆 You Win!");
-      else if (score === target - 1) setResult("🤝 Tie");
-      else setResult("❌ You Lost");
+    if (result.includes("Win")) {
+      table[myTeam].won++;
+      table[myTeam].points += 2;
+      table[oppTeam].lost++;
+    } else if (result.includes("Lost")) {
+      table[oppTeam].won++;
+      table[oppTeam].points += 2;
+      table[myTeam].lost++;
     }
+
+    localStorage.setItem("pointsTable", JSON.stringify(table));
   };
+
+  const savePlayerStats = () => {
+    let stats = JSON.parse(localStorage.getItem("playerStats")) || {};
+
+    Object.entries(scorecard).forEach(([name, s]) => {
+      if (!stats[name]) stats[name] = { runs: 0, wickets: 0 };
+      stats[name].runs += s.runs;
+    });
+
+    Object.keys(bowlerBalls).forEach(name => {
+      if (!stats[name]) stats[name] = { runs: 0, wickets: 0 };
+      stats[name].wickets += Math.floor(Math.random() * 3);
+    });
+
+    localStorage.setItem("playerStats", JSON.stringify(stats));
+  };
+
+  useEffect(() => {
+    if (result) {
+      saveMatchData();
+      savePlayerStats();
+    }
+  }, [result]);
 
   // ================= PLAY BALL =================
   const playBall = () => {
     if (result) return;
 
-    // 🔴 FORCE BOWLER IF USER BOWLING
     if (!userBatting && !bowler) {
       alert("Select bowler first");
       return;
@@ -147,18 +151,20 @@ export default function LiveMatch() {
 
     let currentBowler = bowler;
 
-    // 🤖 AI BOWLING
-    if (userBatting) {
-      if (!bowler) {
-        const ai = getAIBowler();
-        setBowler(ai);
-        currentBowler = ai;
-      }
+    if (userBatting && !bowler) {
+      const eligible = bowlingTeam.filter(p =>
+        p.name !== keeper &&
+        p.name !== lastBowler &&
+        (bowlerBalls[p.name] || 0) < 24
+      );
+
+      currentBowler = eligible[Math.floor(Math.random() * eligible.length)];
+      setBowler(currentBowler);
     }
 
     const rand = Math.random();
 
-    // 🧠 EXTRAS
+    // 🔥 EXTRAS
     if (rand < 0.05) {
       setScore(prev => prev + 1);
       setLog(prev => [...prev, "Wide"]);
@@ -171,26 +177,8 @@ export default function LiveMatch() {
       return;
     }
 
-    // 🎯 SKILLS
-    const batSkill = striker?.bat || 50;
-    const bowlSkill = currentBowler?.bowl || 50;
-
-    let aggression =
-      shotStriker === "aggressive" ? 1.3 :
-      shotStriker === "defensive" ? 0.7 : 1;
-
-    let wicketChance = (bowlSkill - batSkill) / 200 + 0.05;
-    wicketChance *= aggression;
-
-    const r = Math.random();
-    let res;
-
-    if (r < wicketChance) res = "W";
-    else if (r < 0.3) res = 0;
-    else if (r < 0.5) res = 1;
-    else if (r < 0.65) res = 2;
-    else if (r < 0.85) res = 4;
-    else res = 6;
+    const outcomes = [0,1,2,4,6,"W"];
+    const res = outcomes[Math.floor(Math.random()*outcomes.length)];
 
     let sc = { ...scorecard };
 
@@ -216,6 +204,8 @@ export default function LiveMatch() {
         }
       }
 
+      setLog(prev => [...prev, `${striker?.name} OUT`]);
+
     } else {
       setScore(prev => prev + res);
 
@@ -228,6 +218,8 @@ export default function LiveMatch() {
         setStriker(nonStriker);
         setNonStriker(striker);
       }
+
+      setLog(prev => [...prev, res]);
     }
 
     setScorecard(sc);
@@ -235,24 +227,20 @@ export default function LiveMatch() {
     const newBalls = balls + 1;
     setBalls(newBalls);
 
-    // 🛑 END AT 20 OVERS
     if (newBalls >= 120) {
       endInnings();
       return;
     }
 
-    // 🎯 CHASE END
     if (innings === 2 && score >= target) {
       endInnings();
       return;
     }
 
-    // 📊 TRACK BOWLER
     let bb = { ...bowlerBalls };
     bb[currentBowler.name] = (bb[currentBowler.name] || 0) + 1;
     setBowlerBalls(bb);
 
-    // 🔁 OVER END
     if (newBalls % 6 === 0 && striker && nonStriker) {
       setLastBowler(currentBowler.name);
       setBowler(null);
@@ -263,46 +251,44 @@ export default function LiveMatch() {
     }
   };
 
-  return (
-    <div style={{ padding: 20, color: "white", background: "#0B0F1A" }}>
+  const endInnings = () => {
+    if (innings === 1) {
+      setTarget(score + 1);
+      setInnings(2);
 
+      setBattingTeam(bowlingTeam);
+      setBowlingTeam(battingTeam);
+      setUserBatting(!userBatting);
+
+      initInnings(bowlingTeam);
+    } else {
+      if (score > target - 1) setResult("🏆 You Win!");
+      else if (score === target - 1) setResult("🤝 Tie");
+      else setResult("❌ You Lost");
+    }
+  };
+
+  return (
+    <div style={{ padding:20, color:"white", background:"#0B0F1A" }}>
       <h2>{score}/{wickets}</h2>
       <p>Overs: {Math.floor(balls/6)}.{balls%6}</p>
-      {target && <p>Target: {target}</p>}
 
-      <h3>Striker: {striker?.name || "-"}</h3>
-      <h3>Non-Striker: {nonStriker?.name || "-"}</h3>
+      <h3>Striker: {striker?.name}</h3>
+      <h3>Non-Striker: {nonStriker?.name}</h3>
 
-      {/* 🎯 SHOT CONTROL */}
-      {userBatting && (
-        <>
-          <p>Striker Shot</p>
-          <button onClick={()=>setShotStriker("defensive")}>Def</button>
-          <button onClick={()=>setShotStriker("normal")}>Normal</button>
-          <button onClick={()=>setShotStriker("aggressive")}>Attack</button>
-        </>
-      )}
-
-      {/* 🎯 BOWLER SELECTION */}
       {!userBatting && selectBowlerMode && (
         <>
           <h3>Select Bowler</h3>
           {bowlingTeam.map((p,i)=>(
             <button key={i} onClick={()=>selectBowler(p)}>
-              {p.name} ({Math.floor((bowlerBalls[p.name]||0)/6)} ov)
+              {p.name}
             </button>
           ))}
         </>
       )}
 
-      {/* 🧾 SCORECARD */}
       <h3>Scorecard</h3>
       <table>
-        <thead>
-          <tr>
-            <th>Player</th><th>Runs</th><th>Balls</th>
-          </tr>
-        </thead>
         <tbody>
           {Object.entries(scorecard).map(([name,s],i)=>(
             <tr key={i}>
@@ -314,6 +300,10 @@ export default function LiveMatch() {
         </tbody>
       </table>
 
+      {!result && (
+        <button onClick={playBall}>Next Ball</button>
+      )}
+
       {result && (
         <>
           <h2>{result}</h2>
@@ -321,10 +311,6 @@ export default function LiveMatch() {
             Back to Tournament
           </button>
         </>
-      )}
-
-      {!result && (!selectBowlerMode || userBatting) && (
-        <button onClick={playBall}>Next Ball</button>
       )}
     </div>
   );
