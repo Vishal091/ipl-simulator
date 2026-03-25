@@ -8,11 +8,13 @@ export default function MatchSetup() {
   const [squad, setSquad] = useState([]);
   const [xi, setXi] = useState([]);
 
+  const [captain, setCaptain] = useState(null);
+  const [keeper, setKeeper] = useState(null);
+
   useEffect(() => {
     const t = localStorage.getItem("selectedTeam");
 
     if (!t) {
-      alert("No team selected");
       window.location.href = "/tournament";
       return;
     }
@@ -33,27 +35,24 @@ export default function MatchSetup() {
   };
 
   const proceed = async () => {
-    if (xi.length !== 11) {
-      alert("Select 11 players");
-      return;
-    }
+    if (xi.length !== 11) return alert("Select 11 players");
+    if (!captain) return alert("Select captain");
+    if (!keeper) return alert("Select wicketkeeper");
 
-    // 🔥 get opponent
     const teamsRes = await fetch(API + "/teams");
     const teams = await teamsRes.json();
 
     const myTeam = localStorage.getItem("selectedTeam");
-
     const opponent = teams.find(t => t !== myTeam);
 
     const oppRes = await fetch(`${API}/team/${opponent}`);
-    const oppSquad = await oppRes.json();
-
-    const oppXI = oppSquad.sort((a, b) => b.agg - a.agg).slice(0, 11);
+    const oppXI = (await oppRes.json()).slice(0, 11);
 
     localStorage.setItem("matchData", JSON.stringify({
       myXI: xi,
-      oppXI: oppXI,
+      oppXI,
+      captain,
+      keeper,
       myTeam,
       oppTeam: opponent
     }));
@@ -63,7 +62,7 @@ export default function MatchSetup() {
 
   return (
     <div style={{ padding: 20, color: "white", background: "#0B0F1A" }}>
-      <h1>Select Playing XI ({xi.length}/11)</h1>
+      <h1>Select XI ({xi.length}/11)</h1>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
         {squad.map((p, i) => (
@@ -74,19 +73,29 @@ export default function MatchSetup() {
               padding: 10,
               border: xi.find(x => x.name === p.name)
                 ? "2px solid cyan"
-                : "1px solid #333",
-              cursor: "pointer"
+                : "1px solid #333"
             }}
           >
-            <div>{p.name}</div>
-            <div style={{ fontSize: "12px" }}>{p.role}</div>
+            {p.name}
           </div>
         ))}
       </div>
 
-      <button onClick={proceed} style={{ marginTop: 20 }}>
-        Continue → Toss
-      </button>
+      <h3>Select Captain</h3>
+      {xi.map((p, i) => (
+        <button key={i} onClick={() => setCaptain(p.name)}>
+          {p.name}
+        </button>
+      ))}
+
+      <h3>Select Wicketkeeper</h3>
+      {xi.map((p, i) => (
+        <button key={i} onClick={() => setKeeper(p.name)}>
+          {p.name}
+        </button>
+      ))}
+
+      <button onClick={proceed}>Continue</button>
     </div>
   );
 }
