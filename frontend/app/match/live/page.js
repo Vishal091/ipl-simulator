@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 
 export default function LiveMatch() {
+
   const [battingTeam, setBattingTeam] = useState([]);
   const [bowlingTeam, setBowlingTeam] = useState([]);
 
@@ -28,8 +29,12 @@ export default function LiveMatch() {
   const [userBatting, setUserBatting] = useState(false);
   const [result, setResult] = useState(null);
 
-  // 🔥 NEW: shot system
-  const [shotType, setShotType] = useState("normal");
+  const [shotStriker, setShotStriker] = useState("normal");
+  const [shotNonStriker, setShotNonStriker] = useState("normal");
+
+  const [log, setLog] = useState([]);
+
+  const [scorecard, setScorecard] = useState({});
 
   // ================= INIT =================
   useEffect(() => {
@@ -74,8 +79,13 @@ export default function LiveMatch() {
     setBowler(null);
     setLastBowler(null);
     setBowlerBalls({});
-    setSelectBowlerMode(true);
-    setSelectBatterMode(false);
+
+    // init scorecard
+    let sc = {};
+    team.forEach(p => {
+      sc[p.name] = { runs: 0, balls: 0, out: false };
+    });
+    setScorecard(sc);
   };
 
   // ================= AI BOWLER =================
@@ -104,100 +114,71 @@ export default function LiveMatch() {
 
       initInnings(newBat);
     } else {
-      if (score > target - 1) {
-        setResult("🏆 You Win!");
-      } else if (score === target - 1) {
-        setResult("🤝 Match Tied");
-      } else {
-        setResult("❌ You Lost");
-      }
+      if (score > target - 1) setResult("🏆 You Win!");
+      else if (score === target - 1) setResult("🤝 Tie");
+      else setResult("❌ You Lost");
     }
   };
 
-  // ================= SELECT BOWLER =================
-  const selectBowler = (p) => {
-    if (p.name === keeper) return alert("Keeper cannot bowl");
-    if (p.name === lastBowler) return alert("No consecutive overs");
-    if ((bowlerBalls[p.name] || 0) >= 24) return alert("Max 4 overs");
-
-    setBowler(p);
-    setSelectBowlerMode(false);
-  };
-
-  // ================= SELECT BATTER =================
-  const selectNextBatter = (p) => {
-    setStriker(p);
-    setAvailableBatters(availableBatters.filter(b => b.name !== p.name));
-    setSelectBatterMode(false);
-  };
-
-  // ================= REALISTIC PLAY BALL =================
+  // ================= PLAY BALL =================
   const playBall = () => {
     if (result) return;
 
     let currentBowler = bowler;
 
-    // AI bowling
     if (userBatting) {
       if (!bowler) {
-        const aiBowler = getAIBowler();
-        setBowler(aiBowler);
-        currentBowler = aiBowler;
+        const ai = getAIBowler();
+        setBowler(ai);
+        currentBowler = ai;
       }
     } else {
-      if (!bowler) {
-        alert("Select bowler");
-        return;
-      }
+      if (!bowler) return alert("Select bowler");
+    }
+
+    const rand = Math.random();
+
+    // 🧠 EXTRAS SYSTEM
+    if (rand < 0.05) {
+      setScore(score + 1);
+      setLog(prev => [...prev, "Wide"]);
+      return;
+    }
+
+    if (rand < 0.10) {
+      setScore(score + 1);
+      setLog(prev => [...prev, "No Ball"]);
+      return;
     }
 
     // 🎯 SKILLS
     const batSkill = striker?.bat || 50;
     const bowlSkill = currentBowler?.bowl || 50;
 
-    const over = Math.floor(balls / 6);
+    let aggression = shotStriker === "aggressive" ? 1.3 :
+                     shotStriker === "defensive" ? 0.7 : 1;
 
-    // 🎮 SHOT IMPACT
-    let aggression = 1;
-
-    if (shotType === "defensive") aggression = 0.7;
-    if (shotType === "aggressive") aggression = 1.3;
-
-    if (over < 6) aggression += 0.1; // powerplay
-    if (over >= 16) aggression += 0.2; // death
-
-    // 🎯 PROBABILITY
     let wicketChance = (bowlSkill - batSkill) / 200 + 0.05;
     wicketChance *= aggression;
 
-    let runFactor = (batSkill / 100) * aggression;
-
-    const rand = Math.random();
-
+    const r = Math.random();
     let res;
 
-    if (rand < wicketChance) {
-      res = "W";
-    } else if (rand < 0.25 * runFactor) {
-      res = 0;
-    } else if (rand < 0.45 * runFactor) {
-      res = 1;
-    } else if (rand < 0.60 * runFactor) {
-      res = 2;
-    } else if (rand < 0.80 * runFactor) {
-      res = 4;
-    } else {
-      res = 6;
-    }
+    if (r < wicketChance) res = "W";
+    else if (r < 0.3) res = 0;
+    else if (r < 0.5) res = 1;
+    else if (r < 0.65) res = 2;
+    else if (r < 0.85) res = 4;
+    else res = 6;
 
-    let newScore = score;
-    let newWickets = wickets;
+    let sc = { ...scorecard };
 
     if (res === "W") {
-      newWickets++;
-      setWickets(newWickets);
+      sc[striker.name].out = true;
+      setWickets(wickets + 1);
 
-      if (newWickets >= 10) {
+      if (wickets + 1 >= 10) {
+        setScorecard(sc);
         endInnings();
         return;
       }
@@ -205,41 +186,50 @@ export default function LiveMatch() {
       if (userBatting) {
         setSelectBatterMode(true);
       } else {
-        if (availableBatters.length > 0) {
-          setStriker(availableBatters[0]);
-          setAvailableBatters(availableBatters.slice(1));
-        }
+        const next = availableBatters[0];
+        setStriker(next);
+        setAvailableBatters(availableBatters.slice(1));
       }
+
+      setLog(prev => [...prev, `${striker.name} OUT`]);
+
     } else {
-      newScore += res;
-      setScore(newScore);
+      setScore(score + res);
+
+      sc[striker.name].runs += res;
+      sc[striker.name].balls += 1;
 
       if (res % 2 === 1) {
         const temp = striker;
         setStriker(nonStriker);
         setNonStriker(temp);
       }
+
+      setLog(prev => [...prev, res]);
     }
+
+    setScorecard(sc);
 
     const newBalls = balls + 1;
     setBalls(newBalls);
 
-    // chase end
-    if (innings === 2 && newScore >= target) {
+    if (newBalls >= 120) {
       endInnings();
       return;
     }
 
-    // track bowler
+    if (innings === 2 && score >= target) {
+      endInnings();
+      return;
+    }
+
     let bb = { ...bowlerBalls };
     bb[currentBowler.name] = (bb[currentBowler.name] || 0) + 1;
     setBowlerBalls(bb);
 
-    // over end
     if (newBalls % 6 === 0) {
       setLastBowler(currentBowler.name);
       setBowler(null);
-      setSelectBowlerMode(true);
 
       const temp = striker;
       setStriker(nonStriker);
@@ -249,62 +239,59 @@ export default function LiveMatch() {
 
   // ================= UI =================
   return (
-    <div style={{ padding: 20, background: "#0B0F1A", color: "white", minHeight: "100vh" }}>
-      <h2>Innings {innings}</h2>
-      {target && <p>Target: {target}</p>}
-
+    <div style={{ padding: 20, color: "white", background: "#0B0F1A" }}>
       <h2>{score}/{wickets}</h2>
       <p>Overs: {Math.floor(balls/6)}.{balls%6}</p>
+      {target && <p>Target: {target}</p>}
 
-      <p>Striker: {striker?.name}</p>
-      <p>Bowler: {bowler ? bowler.name : "Auto / Select"}</p>
+      <h3>{striker?.name} ⭐</h3>
+      <h3>{nonStriker?.name}</h3>
 
-      {/* 🔥 SHOT CONTROL */}
+      {/* 🎯 SHOT CONTROL BOTH BATTERS */}
       {userBatting && (
-        <div style={{ marginTop: 10 }}>
-          <button onClick={() => setShotType("defensive")}>🛡️ Def</button>
-          <button onClick={() => setShotType("normal")}>⚖️ Normal</button>
-          <button onClick={() => setShotType("aggressive")}>🔥 Attack</button>
-        </div>
+        <>
+          <p>Striker Shot</p>
+          <button onClick={()=>setShotStriker("defensive")}>Def</button>
+          <button onClick={()=>setShotStriker("normal")}>Normal</button>
+          <button onClick={()=>setShotStriker("aggressive")}>Attack</button>
+
+          <p>Non-Striker Shot</p>
+          <button onClick={()=>setShotNonStriker("defensive")}>Def</button>
+          <button onClick={()=>setShotNonStriker("normal")}>Normal</button>
+          <button onClick={()=>setShotNonStriker("aggressive")}>Attack</button>
+        </>
       )}
+
+      {/* 🧾 SCORECARD */}
+      <h3>Scorecard</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Player</th><th>Runs</th><th>Balls</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(scorecard).map(([name, s], i)=>(
+            <tr key={i}>
+              <td>{name}</td>
+              <td>{s.runs}</td>
+              <td>{s.balls}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       {result && (
         <>
           <h2>{result}</h2>
-          <button onClick={() => window.location.href="/tournament"}>
+          <button onClick={()=>window.location.href="/tournament/dashboard"}>
             Back to Tournament
           </button>
         </>
       )}
 
       {!result && (
-        <>
-          {!userBatting && selectBowlerMode && (
-            <>
-              <h3>Select Bowler</h3>
-              {bowlingTeam.map((p,i)=>(
-                <button key={i} onClick={()=>selectBowler(p)}>
-                  {p.name} ({Math.floor((bowlerBalls[p.name]||0)/6)} ov)
-                </button>
-              ))}
-            </>
-          )}
-
-          {selectBatterMode && (
-            <>
-              <h3>Select Batter</h3>
-              {availableBatters.map((p,i)=>(
-                <button key={i} onClick={()=>selectNextBatter(p)}>
-                  {p.name}
-                </button>
-              ))}
-            </>
-          )}
-
-          {(!selectBowlerMode || userBatting) && !selectBatterMode && (
-            <button onClick={playBall}>Next Ball</button>
-          )}
-        </>
+        <button onClick={playBall}>Next Ball</button>
       )}
     </div>
   );
