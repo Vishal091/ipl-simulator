@@ -70,11 +70,23 @@ export default function LiveMatch() {
 
     setBowler(null);
     setLastBowler(null);
+    setBowlerBalls({});
     setSelectBowlerMode(true);
     setSelectBatterMode(false);
   };
 
-  // ================= INNINGS SWITCH =================
+  // ================= AUTO BOWLER (AI) =================
+  const getAIBowler = () => {
+    const eligible = bowlingTeam.filter(p =>
+      p.name !== keeper &&
+      p.name !== lastBowler &&
+      (bowlerBalls[p.name] || 0) < 24
+    );
+
+    return eligible[Math.floor(Math.random() * eligible.length)];
+  };
+
+  // ================= INNINGS END =================
   const endInnings = () => {
     if (innings === 1) {
       setTarget(score + 1);
@@ -89,15 +101,17 @@ export default function LiveMatch() {
 
       initInnings(newBat);
     } else {
-      if (score >= target) {
-        setResult("🏆 Chase Successful!");
+      if (score > target - 1) {
+        setResult("🏆 You Win!");
+      } else if (score === target - 1) {
+        setResult("🤝 Match Tied");
       } else {
-        setResult("❌ Failed to Chase");
+        setResult("❌ You Lost");
       }
     }
   };
 
-  // ================= SELECT BOWLER =================
+  // ================= SELECT BOWLER (USER) =================
   const selectBowler = (p) => {
     if (p.name === keeper) return alert("Keeper cannot bowl");
     if (p.name === lastBowler) return alert("No consecutive overs");
@@ -107,7 +121,6 @@ export default function LiveMatch() {
     setSelectBowlerMode(false);
   };
 
-  // ================= SELECT BATTER =================
   const selectNextBatter = (p) => {
     setStriker(p);
     setAvailableBatters(availableBatters.filter(b => b.name !== p.name));
@@ -116,12 +129,22 @@ export default function LiveMatch() {
 
   // ================= PLAY BALL =================
   const playBall = () => {
-    // 🔒 BLOCK IF INNINGS ENDED
     if (result) return;
 
-    if (!userBatting && !bowler) {
-      alert("Select bowler first");
-      return;
+    // 🔥 AUTO BOWLER FOR AI
+    let currentBowler = bowler;
+
+    if (userBatting) {
+      if (!bowler) {
+        const aiBowler = getAIBowler();
+        setBowler(aiBowler);
+        currentBowler = aiBowler;
+      }
+    } else {
+      if (!bowler) {
+        alert("Select bowler");
+        return;
+      }
     }
 
     const outcomes = [0,1,2,4,6,"W"];
@@ -131,10 +154,9 @@ export default function LiveMatch() {
     let newWickets = wickets;
 
     if (res === "W") {
-      newWickets += 1;
+      newWickets++;
       setWickets(newWickets);
 
-      // 🛑 ALL OUT
       if (newWickets >= 10) {
         endInnings();
         return;
@@ -168,9 +190,14 @@ export default function LiveMatch() {
       return;
     }
 
+    // track bowler balls (HARD LIMIT)
+    let bb = { ...bowlerBalls };
+    bb[currentBowler.name] = (bb[currentBowler.name] || 0) + 1;
+    setBowlerBalls(bb);
+
     // ⏱ OVER END
     if (newBalls % 6 === 0) {
-      setLastBowler(bowler?.name);
+      setLastBowler(currentBowler.name);
       setBowler(null);
       setSelectBowlerMode(true);
 
@@ -183,16 +210,14 @@ export default function LiveMatch() {
   // ================= UI =================
   return (
     <div style={{ padding: 20, background: "#0B0F1A", color: "white", minHeight: "100vh" }}>
-      
       <h2>Innings {innings}</h2>
       {target && <p>Target: {target}</p>}
 
       <h2>{score}/{wickets}</h2>
-      <p>{Math.floor(balls/6)}.{balls%6}</p>
+      <p>Overs: {Math.floor(balls/6)}.{balls%6}</p>
 
-      <p>Striker: {striker?.name || "-"}</p>
-      <p>Non-Striker: {nonStriker?.name || "-"}</p>
-      <p>Bowler: {bowler ? bowler.name : "Select bowler"}</p>
+      <p>Striker: {striker?.name}</p>
+      <p>Bowler: {bowler ? bowler.name : "Auto / Select"}</p>
 
       {result && (
         <>
