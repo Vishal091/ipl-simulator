@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-export default function Setup() {
+export default function MatchSetup() {
   const API = "https://ipl-simulator-tb8n.onrender.com";
 
   const [team, setTeam] = useState("");
@@ -21,8 +21,7 @@ export default function Setup() {
 
     fetch(`${API}/team/${t}`)
       .then(res => res.json())
-      .then(setSquad)
-      .catch(() => alert("Failed to load squad"));
+      .then(setSquad);
   }, []);
 
   const toggle = (p) => {
@@ -33,13 +32,32 @@ export default function Setup() {
     }
   };
 
-  const proceed = () => {
+  const proceed = async () => {
     if (xi.length !== 11) {
       alert("Select 11 players");
       return;
     }
 
-    localStorage.setItem("playingXI", JSON.stringify(xi));
+    // 🔥 get opponent
+    const teamsRes = await fetch(API + "/teams");
+    const teams = await teamsRes.json();
+
+    const myTeam = localStorage.getItem("selectedTeam");
+
+    const opponent = teams.find(t => t !== myTeam);
+
+    const oppRes = await fetch(`${API}/team/${opponent}`);
+    const oppSquad = await oppRes.json();
+
+    const oppXI = oppSquad.sort((a, b) => b.agg - a.agg).slice(0, 11);
+
+    localStorage.setItem("matchData", JSON.stringify({
+      myXI: xi,
+      oppXI: oppXI,
+      myTeam,
+      oppTeam: opponent
+    }));
+
     window.location.href = "/match/toss";
   };
 
@@ -60,13 +78,14 @@ export default function Setup() {
               cursor: "pointer"
             }}
           >
-            {p.name}
+            <div>{p.name}</div>
+            <div style={{ fontSize: "12px" }}>{p.role}</div>
           </div>
         ))}
       </div>
 
       <button onClick={proceed} style={{ marginTop: 20 }}>
-        Continue
+        Continue → Toss
       </button>
     </div>
   );
