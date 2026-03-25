@@ -28,6 +28,9 @@ export default function LiveMatch() {
   const [userBatting, setUserBatting] = useState(false);
   const [result, setResult] = useState(null);
 
+  // 🔥 NEW: shot system
+  const [shotType, setShotType] = useState("normal");
+
   // ================= INIT =================
   useEffect(() => {
     const match = JSON.parse(localStorage.getItem("matchData"));
@@ -75,7 +78,7 @@ export default function LiveMatch() {
     setSelectBatterMode(false);
   };
 
-  // ================= AUTO BOWLER (AI) =================
+  // ================= AI BOWLER =================
   const getAIBowler = () => {
     const eligible = bowlingTeam.filter(p =>
       p.name !== keeper &&
@@ -86,7 +89,7 @@ export default function LiveMatch() {
     return eligible[Math.floor(Math.random() * eligible.length)];
   };
 
-  // ================= INNINGS END =================
+  // ================= END INNINGS =================
   const endInnings = () => {
     if (innings === 1) {
       setTarget(score + 1);
@@ -111,7 +114,7 @@ export default function LiveMatch() {
     }
   };
 
-  // ================= SELECT BOWLER (USER) =================
+  // ================= SELECT BOWLER =================
   const selectBowler = (p) => {
     if (p.name === keeper) return alert("Keeper cannot bowl");
     if (p.name === lastBowler) return alert("No consecutive overs");
@@ -121,19 +124,20 @@ export default function LiveMatch() {
     setSelectBowlerMode(false);
   };
 
+  // ================= SELECT BATTER =================
   const selectNextBatter = (p) => {
     setStriker(p);
     setAvailableBatters(availableBatters.filter(b => b.name !== p.name));
     setSelectBatterMode(false);
   };
 
-  // ================= PLAY BALL =================
+  // ================= REALISTIC PLAY BALL =================
   const playBall = () => {
     if (result) return;
 
-    // 🔥 AUTO BOWLER FOR AI
     let currentBowler = bowler;
 
+    // AI bowling
     if (userBatting) {
       if (!bowler) {
         const aiBowler = getAIBowler();
@@ -147,8 +151,44 @@ export default function LiveMatch() {
       }
     }
 
-    const outcomes = [0,1,2,4,6,"W"];
-    const res = outcomes[Math.floor(Math.random()*outcomes.length)];
+    // 🎯 SKILLS
+    const batSkill = striker?.bat || 50;
+    const bowlSkill = currentBowler?.bowl || 50;
+
+    const over = Math.floor(balls / 6);
+
+    // 🎮 SHOT IMPACT
+    let aggression = 1;
+
+    if (shotType === "defensive") aggression = 0.7;
+    if (shotType === "aggressive") aggression = 1.3;
+
+    if (over < 6) aggression += 0.1; // powerplay
+    if (over >= 16) aggression += 0.2; // death
+
+    // 🎯 PROBABILITY
+    let wicketChance = (bowlSkill - batSkill) / 200 + 0.05;
+    wicketChance *= aggression;
+
+    let runFactor = (batSkill / 100) * aggression;
+
+    const rand = Math.random();
+
+    let res;
+
+    if (rand < wicketChance) {
+      res = "W";
+    } else if (rand < 0.25 * runFactor) {
+      res = 0;
+    } else if (rand < 0.45 * runFactor) {
+      res = 1;
+    } else if (rand < 0.60 * runFactor) {
+      res = 2;
+    } else if (rand < 0.80 * runFactor) {
+      res = 4;
+    } else {
+      res = 6;
+    }
 
     let newScore = score;
     let newWickets = wickets;
@@ -184,18 +224,18 @@ export default function LiveMatch() {
     const newBalls = balls + 1;
     setBalls(newBalls);
 
-    // 🎯 CHASE END
+    // chase end
     if (innings === 2 && newScore >= target) {
       endInnings();
       return;
     }
 
-    // track bowler balls (HARD LIMIT)
+    // track bowler
     let bb = { ...bowlerBalls };
     bb[currentBowler.name] = (bb[currentBowler.name] || 0) + 1;
     setBowlerBalls(bb);
 
-    // ⏱ OVER END
+    // over end
     if (newBalls % 6 === 0) {
       setLastBowler(currentBowler.name);
       setBowler(null);
@@ -218,6 +258,15 @@ export default function LiveMatch() {
 
       <p>Striker: {striker?.name}</p>
       <p>Bowler: {bowler ? bowler.name : "Auto / Select"}</p>
+
+      {/* 🔥 SHOT CONTROL */}
+      {userBatting && (
+        <div style={{ marginTop: 10 }}>
+          <button onClick={() => setShotType("defensive")}>🛡️ Def</button>
+          <button onClick={() => setShotType("normal")}>⚖️ Normal</button>
+          <button onClick={() => setShotType("aggressive")}>🔥 Attack</button>
+        </div>
+      )}
 
       {result && (
         <>
