@@ -9,7 +9,6 @@ export default function Toss() {
     const tossWinner = Math.random() > 0.5 ? "You" : "Opponent";
     setResult(tossWinner);
 
-    // 🔥 AUTO DECISION IF OPPONENT WINS
     if (tossWinner === "Opponent") {
       setTimeout(() => {
         const oppDecision = Math.random() > 0.5 ? "bat" : "bowl";
@@ -19,11 +18,9 @@ export default function Toss() {
         localStorage.setItem("tossWinner", "Opponent");
         localStorage.setItem("tossDecision", oppDecision);
 
-        // small delay for UX
         setTimeout(() => {
           window.location.href = "/match/live";
         }, 1000);
-
       }, 1000);
     }
   };
@@ -38,52 +35,29 @@ export default function Toss() {
   };
 
   return (
-    <div style={{
-      padding: "20px",
-      color: "white",
-      background: "#0B0F1A",
-      minHeight: "100vh"
-    }}>
+    <div style={{ padding: 20, color: "white", background: "#0B0F1A" }}>
       <h1>🪙 Toss</h1>
 
-      {!result && (
-        <button onClick={flip} style={{ marginTop: "20px" }}>
-          Flip Coin
-        </button>
-      )}
+      {!result && <button onClick={flip}>Flip Coin</button>}
 
       {result && (
-        <div style={{ marginTop: "20px" }}>
+        <>
           <h2>{result} won the toss</h2>
 
-          {/* YOU WON */}
           {result === "You" && !decision && (
             <>
-              <p>Choose:</p>
-
-              <button onClick={() => choose("bat")} style={{ marginRight: "10px" }}>
-                🏏 Bat
-              </button>
-
-              <button onClick={() => choose("bowl")}>
-                🎯 Bowl
-              </button>
+              <button onClick={() => choose("bat")}>Bat</button>
+              <button onClick={() => choose("bowl")}>Bowl</button>
             </>
           )}
 
-          {/* OPPONENT WON */}
           {result === "Opponent" && (
             <>
-              <p>Opponent is deciding...</p>
-
-              {decision && (
-                <p style={{ marginTop: "10px", color: "#00E5FF" }}>
-                  Opponent chose to {decision.toUpperCase()}
-                </p>
-              )}
+              <p>Opponent deciding...</p>
+              {decision && <p>Opponent chose to {decision}</p>}
             </>
           )}
-        </div>
+        </>
       )}
     </div>
   );
