@@ -72,15 +72,20 @@ export default function LiveMatch() {
     setWickets(0);
     setBalls(0);
 
-    setStriker(team[0]);
-    setNonStriker(team[1]);
+    if (team.length >= 2) {
+      setStriker(team[0]);
+      setNonStriker(team[1]);
+    } else {
+      setStriker(team[0] || null);
+      setNonStriker(null);
+    }
+
     setAvailableBatters(team.slice(2));
 
     setBowler(null);
     setLastBowler(null);
     setBowlerBalls({});
 
-    // init scorecard
     let sc = {};
     team.forEach(p => {
       sc[p.name] = { runs: 0, balls: 0, out: false };
@@ -138,25 +143,25 @@ export default function LiveMatch() {
 
     const rand = Math.random();
 
-    // 🧠 EXTRAS SYSTEM
+    // ===== EXTRAS =====
     if (rand < 0.05) {
-      setScore(score + 1);
+      setScore(prev => prev + 1);
       setLog(prev => [...prev, "Wide"]);
       return;
     }
 
     if (rand < 0.10) {
-      setScore(score + 1);
+      setScore(prev => prev + 1);
       setLog(prev => [...prev, "No Ball"]);
       return;
     }
 
-    // 🎯 SKILLS
     const batSkill = striker?.bat || 50;
     const bowlSkill = currentBowler?.bowl || 50;
 
-    let aggression = shotStriker === "aggressive" ? 1.3 :
-                     shotStriker === "defensive" ? 0.7 : 1;
+    let aggression =
+      shotStriker === "aggressive" ? 1.3 :
+      shotStriker === "defensive" ? 0.7 : 1;
 
     let wicketChance = (bowlSkill - batSkill) / 200 + 0.05;
     wicketChance *= aggression;
@@ -174,10 +179,12 @@ export default function LiveMatch() {
     let sc = { ...scorecard };
 
     if (res === "W") {
-      sc[striker.name].out = true;
-      setWickets(wickets + 1);
+      const newWickets = wickets + 1;
+      setWickets(newWickets);
 
-      if (wickets + 1 >= 10) {
+      if (striker) sc[striker.name].out = true;
+
+      if (newWickets >= 10) {
         setScorecard(sc);
         endInnings();
         return;
@@ -187,22 +194,27 @@ export default function LiveMatch() {
         setSelectBatterMode(true);
       } else {
         const next = availableBatters[0];
-        setStriker(next);
-        setAvailableBatters(availableBatters.slice(1));
+        if (next) {
+          setStriker(next);
+          setAvailableBatters(availableBatters.slice(1));
+        } else {
+          setStriker(null);
+        }
       }
 
-      setLog(prev => [...prev, `${striker.name} OUT`]);
+      setLog(prev => [...prev, `${striker?.name} OUT`]);
 
     } else {
-      setScore(score + res);
+      setScore(prev => prev + res);
 
-      sc[striker.name].runs += res;
-      sc[striker.name].balls += 1;
+      if (striker) {
+        sc[striker.name].runs += res;
+        sc[striker.name].balls += 1;
+      }
 
-      if (res % 2 === 1) {
-        const temp = striker;
+      if (res % 2 === 1 && striker && nonStriker) {
         setStriker(nonStriker);
-        setNonStriker(temp);
+        setNonStriker(striker);
       }
 
       setLog(prev => [...prev, res]);
@@ -227,13 +239,12 @@ export default function LiveMatch() {
     bb[currentBowler.name] = (bb[currentBowler.name] || 0) + 1;
     setBowlerBalls(bb);
 
-    if (newBalls % 6 === 0) {
+    if (newBalls % 6 === 0 && striker && nonStriker) {
       setLastBowler(currentBowler.name);
       setBowler(null);
 
-      const temp = striker;
       setStriker(nonStriker);
-      setNonStriker(temp);
+      setNonStriker(striker);
     }
   };
 
@@ -244,10 +255,10 @@ export default function LiveMatch() {
       <p>Overs: {Math.floor(balls/6)}.{balls%6}</p>
       {target && <p>Target: {target}</p>}
 
-      <h3>{striker?.name} ⭐</h3>
-      <h3>{nonStriker?.name}</h3>
+      <h3>Striker: {striker ? striker.name : "-"}</h3>
+      <h3>Non-Striker: {nonStriker ? nonStriker.name : "-"}</h3>
 
-      {/* 🎯 SHOT CONTROL BOTH BATTERS */}
+      {/* Shot control */}
       {userBatting && (
         <>
           <p>Striker Shot</p>
@@ -262,7 +273,7 @@ export default function LiveMatch() {
         </>
       )}
 
-      {/* 🧾 SCORECARD */}
+      {/* Scorecard */}
       <h3>Scorecard</h3>
       <table>
         <thead>
