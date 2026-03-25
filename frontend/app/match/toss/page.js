@@ -4,27 +4,24 @@ import { useState } from "react";
 export default function Toss() {
   const [result, setResult] = useState(null);
 
-  const doToss = () => {
-    const toss = Math.random() > 0.5 ? "You" : "Opponent";
-    setResult(toss);
+  const flip = () => {
+    setResult(Math.random() > 0.5 ? "You" : "Opponent");
   };
 
   const choose = (choice) => {
-    localStorage.setItem("tossDecision", choice);
+    localStorage.setItem("decision", choice);
     window.location.href = "/match/live";
   };
 
   return (
-    <div style={{ padding: "20px", color: "white" }}>
+    <div style={{ padding: 20, color: "white" }}>
       <h1>Toss</h1>
 
-      {!result && (
-        <button onClick={doToss}>Flip Coin</button>
-      )}
+      {!result && <button onClick={flip}>Flip</button>}
 
       {result && (
         <>
-          <h2>{result} won the toss</h2>
+          <h2>{result} won</h2>
 
           {result === "You" && (
             <>
