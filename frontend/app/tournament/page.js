@@ -182,7 +182,10 @@ export default function Tournament() {
               return (
                 <div
                   key={i}
-                  onClick={() => loadSquad(team)}
+                  onClick={() => {
+                    localStorage.setItem("selectedTeam", team);
+                    window.location.href = "/tournament/dashboard";
+                  }}
                   style={{
                     cursor: "pointer",
                     borderRadius: "16px",
