@@ -124,7 +124,51 @@ export default function Dashboard() {
           <span>{m.team1} vs {m.team2}</span>
 
           <button
-            onClick={() => alert("Match simulation coming next")}
+            onClick={async () => {
+  try {
+    const team = localStorage.getItem("selectedTeam");
+
+    if (!team) {
+      alert("No team selected");
+      return;
+    }
+
+    // 🔥 get your squad first
+    const squadRes = await fetch(`${API}/team/${team}`);
+    const squad = await squadRes.json();
+
+    // pick best XI (simple auto for now)
+    const xi = squad.sort((a, b) => b.agg - a.agg).slice(0, 11);
+
+    const res = await fetch(API + "/tournament-match", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        team: team,
+        xi: xi
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+      alert(data.error);
+      return;
+    }
+
+    // store match
+    localStorage.setItem("matchData", JSON.stringify(data.match));
+
+    // redirect
+    window.location.href = "/match";
+
+  } catch (err) {
+    console.error(err);
+    alert("Match failed");
+  }
+}}
           >
             ▶ Play
           </button>
