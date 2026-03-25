@@ -13,18 +13,26 @@ export default function Dashboard() {
   useEffect(() => {
     const init = async () => {
       try {
-        // init tournament only once
+        // ✅ Initialize tournament ONLY ONCE
         if (!localStorage.getItem("tournamentInitialized")) {
           await fetch(API + "/init-tournament", { method: "POST" });
           localStorage.setItem("tournamentInitialized", "true");
         }
 
         const selected = localStorage.getItem("selectedTeam");
+
+        if (!selected) {
+          alert("No team selected");
+          window.location.href = "/tournament";
+          return;
+        }
+
         setTeam(selected);
 
-        loadStatus();
+        await loadStatus();
+
       } catch (err) {
-        console.error(err);
+        console.error("Init error:", err);
       }
     };
 
@@ -46,47 +54,12 @@ export default function Dashboard() {
     }
   };
 
-  // ================= PLAY MATCH =================
-  const playMatch = async () => {
-    try {
-      const squadRes = await fetch(`${API}/team/${team}`);
-      const squad = await squadRes.json();
-
-      const xi = squad.sort((a, b) => b.agg - a.agg).slice(0, 11);
-
-      const res = await fetch(API + "/tournament-match", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          team: team,
-          xi: xi
-        })
-      });
-
-      const data = await res.json();
-
-      if (data.error) {
-        alert(data.error);
-        return;
-      }
-
-      localStorage.setItem("matchData", JSON.stringify(data.match));
-
-      // reload updated table
-      await loadStatus();
-
-      // redirect
-      window.location.href = "/match";
-
-    } catch (err) {
-      console.error(err);
-      alert("Match failed");
-    }
+  // ================= REDIRECT TO MATCH SETUP =================
+  const playMatch = () => {
+    window.location.href = "/match/setup";
   };
 
-  // ================= SORT POINTS =================
+  // ================= SORT TABLE =================
   const sortedPoints = Object.entries(points)
     .map(([team, stats]) => ({ team, ...stats }))
     .sort((a, b) => b.points - a.points);
@@ -106,11 +79,15 @@ export default function Dashboard() {
       <h1>🏆 Tournament Dashboard</h1>
       <h2>Your Team: {team}</h2>
 
-      {/* ================= PLAY NEXT MATCH ================= */}
+      {/* ================= PLAY BUTTON ================= */}
       <button
         onClick={playMatch}
         className="glow-btn"
-        style={{ marginTop: "20px" }}
+        style={{
+          marginTop: "20px",
+          padding: "12px 20px",
+          fontSize: "16px"
+        }}
       >
         ▶ Play Next Match
       </button>
@@ -150,6 +127,10 @@ export default function Dashboard() {
       {/* ================= YOUR MATCHES ================= */}
       <h2 style={{ marginTop: "30px" }}>Your Matches</h2>
 
+      {userMatches.length === 0 && (
+        <p>No matches yet</p>
+      )}
+
       {userMatches.map((m, i) => (
         <div key={i} style={{
           padding: "10px",
@@ -172,6 +153,10 @@ export default function Dashboard() {
       {/* ================= RECENT RESULTS ================= */}
       <h2 style={{ marginTop: "30px" }}>Recent Results</h2>
 
+      {results.length === 0 && (
+        <p>No matches played yet</p>
+      )}
+
       {results.slice(-5).map((r, i) => (
         <div key={i} style={{
           padding: "10px",
@@ -180,8 +165,14 @@ export default function Dashboard() {
           borderRadius: "8px"
         }}>
           <div>{r.team1} vs {r.team2}</div>
-          <div style={{ fontSize: "12px", opacity: 0.7 }}>
-            {r.winner ? `Winner: ${r.winner}` : "Match Played"}
+
+          <div style={{
+            fontSize: "12px",
+            opacity: 0.7
+          }}>
+            {r.result
+              ? `${r.result.innings1} vs ${r.result.innings2}`
+              : `Winner: ${r.winner}`}
           </div>
         </div>
       ))}
