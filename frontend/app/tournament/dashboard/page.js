@@ -240,5 +240,5 @@ const purpleCap = Object.entries(stats || {}).sort(
         </div>
       ))}
     </div>
-  )
-}
+  );
+
