@@ -39,6 +39,8 @@ export default function LiveMatch() {
   // ================= INIT =================
   useEffect(() => {
     const match = JSON.parse(localStorage.getItem("matchData"));
+    const myTeam = match.myTeam || "My Team";
+    const oppTeam = match.oppTeam || "Opponent";
     const tossWinner = localStorage.getItem("tossWinner");
     const decision = localStorage.getItem("tossDecision");
 
@@ -278,7 +280,11 @@ export default function LiveMatch() {
       {result && (
         <>
           <h2>{result}</h2>
-          <button onClick={()=>window.location.href="/tournament/dashboard"}>
+          <button onClick={()=>{
+  saveMatchData();
+  saveStats();
+  window.location.href="/tournament/dashboard";
+}}>
             Back to Tournament
           </button>
         </>
