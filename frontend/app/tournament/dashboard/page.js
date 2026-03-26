@@ -8,10 +8,13 @@ export default function Dashboard() {
   const [points, setPoints] = useState({});
   const [schedule, setSchedule] = useState([]);
   const [results, setResults] = useState([]);
+  const [pointsTable, setPointsTable] = useState({});
+  const [playerStats, setPlayerStats] = useState({});
 
   // ================= INIT + LOAD =================
   useEffect(() => {
     const init = async () => {
+      
       try {
         // ✅ Initialize tournament ONLY ONCE
         if (!localStorage.getItem("tournamentInitialized")) {
@@ -38,7 +41,14 @@ export default function Dashboard() {
 
     init();
   }, []);
+const table = JSON.parse(localStorage.getItem("pointsTable")) || {};
+const stats = JSON.parse(localStorage.getItem("playerStats")) || {};
 
+console.log("TABLE:", table);
+console.log("STATS:", stats);
+
+setPointsTable(table);
+setPlayerStats(stats);
   // ================= LOAD STATUS =================
   const loadStatus = async () => {
     try {
@@ -68,7 +78,14 @@ export default function Dashboard() {
   const userMatches = schedule.filter(
     m => m.team1 === team || m.team2 === team
   );
+const table = JSON.parse(localStorage.getItem("pointsTable")) || {};
+const stats = JSON.parse(localStorage.getItem("playerStats")) || {};
 
+console.log("TABLE:", table);
+console.log("STATS:", stats);
+
+setPointsTable(table);
+setPlayerStats(stats);
   return (
     <div style={{
       background: "#0B0F1A",
@@ -123,7 +140,19 @@ export default function Dashboard() {
           ))}
         </tbody>
       </table>
+<h2>🟠 Orange Cap</h2>
+{orangeCap ? (
+  <p>{orangeCap[0]} — {orangeCap[1].runs} runs</p>
+) : (
+  <p>No data yet</p>
+)}
 
+<h2>🟣 Purple Cap</h2>
+{purpleCap ? (
+  <p>{purpleCap[0]} — {purpleCap[1].wickets} wickets</p>
+) : (
+  <p>No data yet</p>
+)}
       {/* ================= YOUR MATCHES ================= */}
       <h2 style={{ marginTop: "30px" }}>Your Matches</h2>
 
@@ -149,7 +178,17 @@ export default function Dashboard() {
           </span>
         </div>
       ))}
+const sortedTeams = Object.entries(pointsTable || {}).sort(
+  (a, b) => (b[1]?.points || 0) - (a[1]?.points || 0)
+);
 
+const orangeCap = Object.entries(playerStats || {}).sort(
+  (a, b) => (b[1]?.runs || 0) - (a[1]?.runs || 0)
+)[0];
+
+const purpleCap = Object.entries(playerStats || {}).sort(
+  (a, b) => (b[1]?.wickets || 0) - (a[1]?.wickets || 0)
+)[0];
       {/* ================= RECENT RESULTS ================= */}
       <h2 style={{ marginTop: "30px" }}>Recent Results</h2>
 
