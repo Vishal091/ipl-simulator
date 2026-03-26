@@ -1,13 +1,13 @@
-useEffect(() => {
-  const storedTable = JSON.parse(localStorage.getItem("pointsTable")) || {};
-  const storedStats = JSON.parse(localStorage.getItem("playerStats")) || {};
+"use client";
+import { useEffect, useState } from "react";
 
-  console.log("TABLE:", storedTable);
-  console.log("STATS:", storedStats);
+export default function Dashboard() {
+  const API = "https://ipl-simulator-tb8n.onrender.com";
 
-  setTable(storedTable);
-  setStats(storedStats);
-}, []);
+  const [team, setTeam] = useState("");
+  const [points, setPoints] = useState({});
+  const [schedule, setSchedule] = useState([]);
+  const [results, setResults] = useState([]);
 
   // ================= INIT + LOAD =================
   useEffect(() => {
@@ -63,17 +63,7 @@ useEffect(() => {
   const sortedPoints = Object.entries(points)
     .map(([team, stats]) => ({ team, ...stats }))
     .sort((a, b) => b.points - a.points);
-const sortedTeams = Object.entries(table || {}).sort(
-  (a, b) => b[1].points - a[1].points
-);
 
-const orangeCap = Object.entries(stats || {}).sort(
-  (a, b) => b[1].runs - a[1].runs
-)[0];
-
-const purpleCap = Object.entries(stats || {}).sort(
-  (a, b) => b[1].wickets - a[1].wickets
-)[0];
   // ================= USER MATCHES =================
   const userMatches = schedule.filter(
     m => m.team1 === team || m.team2 === team
@@ -103,90 +93,37 @@ const purpleCap = Object.entries(stats || {}).sort(
       </button>
 
       {/* ================= POINTS TABLE ================= */}
+      <h2 style={{ marginTop: "30px" }}>Points Table</h2>
 
+      <table style={{
+        width: "100%",
+        marginTop: "10px",
+        borderCollapse: "collapse"
+      }}>
+        <thead>
+          <tr style={{ background: "#111" }}>
+            <th>Team</th>
+            <th>P</th>
+            <th>W</th>
+            <th>Pts</th>
+          </tr>
+        </thead>
 
-
-
-  // 🔥 SORT TEAMS BY POINTS
-  const sortedTeams = Object.entries(table).sort(
-    (a, b) => b[1].points - a[1].points
-  );
-
-  // 🟠 ORANGE CAP
-  const orangeCap = Object.entries(stats).sort(
-    (a, b) => b[1].runs - a[1].runs
-  )[0];
-
-  // 🟣 PURPLE CAP
-  const purpleCap = Object.entries(stats).sort(
-    (a, b) => b[1].wickets - a[1].wickets
-  )[0];
-
-  return (
-    <div style={{
-      padding: 30,
-      color: "white",
-      background: "#0B0F1A",
-      minHeight: "100vh"
-    }}>
-
-      <h1 style={{ fontSize: 32, marginBottom: 20 }}>🏆 Tournament Dashboard</h1>
-
-      {/* ================= POINTS TABLE ================= */}
-      <h2>Points Table</h2>
-
-      {sortedTeams.length === 0 ? (
-        <p>No matches played yet</p>
-      ) : (
-        <table style={{ width: "100%", marginBottom: 30 }}>
-          <thead>
-            <tr>
-              <th>Team</th>
-              <th>P</th>
-              <th>W</th>
-              <th>L</th>
-              <th>Pts</th>
+        <tbody>
+          {sortedPoints.map((t, i) => (
+            <tr key={i} style={{
+              textAlign: "center",
+              borderBottom: "1px solid #222"
+            }}>
+              <td>{t.team}</td>
+              <td>{t.played}</td>
+              <td>{t.wins}</td>
+              <td>{t.points}</td>
             </tr>
-          </thead>
-          <tbody>
-            {sortedTeams.map(([team, t], i) => (
-              <tr key={i}>
-                <td>{team}</td>
-                <td>{t.played}</td>
-                <td>{t.won}</td>
-                <td>{t.lost}</td>
-                <td>{t.points}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+          ))}
+        </tbody>
+      </table>
 
-      {/* ================= ORANGE CAP ================= */}
-      <h2>🟠 Orange Cap</h2>
-
-      {orangeCap ? (
-        <p>
-          {orangeCap[0]} — {orangeCap[1].runs} runs
-        </p>
-      ) : (
-        <p>No data yet</p>
-      )}
-
-      {/* ================= PURPLE CAP ================= */}
-      <h2>🟣 Purple Cap</h2>
-
-      {purpleCap ? (
-        <p>
-          {purpleCap[0]} — {purpleCap[1].wickets} wickets
-        </p>
-      ) : (
-        <p>No data yet</p>
-      )}
-
-    </div>
-  );
-}
       {/* ================= YOUR MATCHES ================= */}
       <h2 style={{ marginTop: "30px" }}>Your Matches</h2>
 
@@ -241,4 +178,4 @@ const purpleCap = Object.entries(stats || {}).sort(
       ))}
     </div>
   );
-
+}
